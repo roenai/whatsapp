@@ -392,54 +392,29 @@ body::before{
 
 <script>
 const M=document.getElementById('msgs'),I=document.getElementById('inp'),S=document.getElementById('hdrStat');
-let busy=false,userOwns=false,aT=[];
+let busy=false,userOwns=false,aT=[],gen=0;
 
 function ts(){const n=new Date;return n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0');}
 function msg(t,d){const e=document.createElement('div');e.className='wa-m wa-m-'+d;if(d==='in')e.style.maxWidth='92%';e.innerHTML=t+'<div class="wa-ts">'+ts()+(d==='out'?' <span class="wa-ck">✓✓</span>':'')+'</div>';M.appendChild(e);M.scrollTop=M.scrollHeight;}
+
 let typ=null;
 function showT(){S.innerHTML='<span class="wa-sd"></span>typing...';typ=document.createElement('div');typ.className='typing';typ.innerHTML='<div class="td"></div><div class="td"></div><div class="td"></div>';M.appendChild(typ);M.scrollTop=M.scrollHeight;}
 function hideT(){S.innerHTML='<span class="wa-sd"></span>online';if(typ){typ.remove();typ=null;}}
 function toast(m){const t=document.getElementById('toast');document.getElementById('toastTxt').textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
 
-// Voice message with animated waveform
-function voiceMsg(duration,transcript,cb){
+function voiceMsgAnim(dur,transcript,g,cb){
   const e=document.createElement('div');e.className='wa-m wa-m-out';
-  // Generate random bar heights
   const bars=Array.from({length:32},()=>4+Math.floor(Math.random()*16));
-  const barHTML=bars.map(h=>'<div class="voice-bar" style="height:'+h+'px;"></div>').join('');
-  e.innerHTML=
-    '<div class="voice-bubble">'+
-      '<div class="voice-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>'+
-      '<div class="voice-wave" id="vwave">'+barHTML+'</div>'+
-      '<div class="voice-time" id="vtime">0:00</div>'+
-    '</div>'+
-    '<div class="wa-ts">'+ts()+' <span class="wa-ck">✓✓</span></div>';
+  e.innerHTML='<div class="voice-bubble"><div class="voice-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div><div class="voice-wave">'+bars.map(h=>'<div class="voice-bar" style="height:'+h+'px"></div>').join('')+'</div><div class="voice-time">0:00</div></div><div class="wa-ts">'+ts()+' <span class="wa-ck">✓✓</span></div>';
   M.appendChild(e);M.scrollTop=M.scrollHeight;
-
-  // Animate bars progressing
-  const barEls=e.querySelectorAll('.voice-bar');
-  const timeEl=e.querySelector('.voice-time');
-  let ci=0;
-  const step=Math.floor((duration*1000)/barEls.length);
-  const anim=setInterval(()=>{
-    if(userOwns){clearInterval(anim);if(cb)cb();return;}
-    if(ci<barEls.length){
-      barEls[ci].classList.add('active');
-      const secs=Math.floor((ci/barEls.length)*duration);
-      timeEl.textContent='0:'+secs.toString().padStart(2,'0');
-      ci++;
-    }else{
-      clearInterval(anim);
-      timeEl.textContent='0:'+duration.toString().padStart(2,'0');
-      // Show transcript
-      if(transcript){
-        const tr=document.createElement('div');tr.className='voice-transcript';
-        tr.innerHTML='🎙️ <strong>Transcribed:</strong> '+transcript;
-        e.insertBefore(tr,e.querySelector('.wa-ts'));
-        M.scrollTop=M.scrollHeight;
-      }
-      setTimeout(()=>{if(cb)cb();},400);
-    }
+  const barEls=e.querySelectorAll('.voice-bar'),timeEl=e.querySelector('.voice-time');
+  let ci=0;const step=Math.floor((dur*1000)/barEls.length);
+  const iv=setInterval(()=>{
+    if(gen!==g){clearInterval(iv);return;}
+    if(ci<barEls.length){barEls[ci].classList.add('active');timeEl.textContent='0:'+Math.floor((ci/barEls.length)*dur).toString().padStart(2,'0');ci++;}
+    else{clearInterval(iv);timeEl.textContent='0:'+dur.toString().padStart(2,'0');
+      if(transcript){const tr=document.createElement('div');tr.className='voice-transcript';tr.innerHTML='🎙️ <strong>Transcribed:</strong> '+transcript;e.insertBefore(tr,e.querySelector('.wa-ts'));M.scrollTop=M.scrollHeight;}
+      setTimeout(()=>{if(gen===g&&cb)cb();},400);}
   },step);
 }
 
@@ -456,55 +431,27 @@ function renderQuote(d){
     '<div class="qc-row"><span class="qc-row-l">GST (10%)</span><span class="qc-row-v">$'+gst.toLocaleString()+'</span></div>'+
     '<div class="qc-total"><span>Total inc. GST</span><span>$'+(tot+gst).toLocaleString()+'</span></div>'+
     '<div class="qc-meta"><span>⏱ '+d.time+'</span><span>📊 MARGIN: '+d.margin+'</span></div>'+
-    '<div class="qc-btns"><button class="qc-btn qc-go" onclick="stopAuto();acceptQ(\''+d.id+'\')">✓ Accept & send</button><button class="qc-btn qc-ed" onclick="stopAuto();modifyQ()">Modify</button></div></div>'+
+    '<div class="qc-btns"><button class="qc-btn qc-go" onclick="killAll();acceptQ(\''+d.id+'\')">✓ Accept & send</button><button class="qc-btn qc-ed" onclick="killAll();modifyQ()">Modify</button></div></div>'+
     '<div class="wa-ts">'+ts()+'</div>';
   M.appendChild(e);M.scrollTop=M.scrollHeight;
 }
 
 function acceptQ(id){
-  msg('Looks good, send it ✅','out');
-  showT();
-  setTimeout(()=>{
-    hideT();
-    msg('Generating PDF quote...','in');
-    showT();
-    setTimeout(()=>{
-      hideT();
-      // Build PDF preview
-      const d=lastQuote;
-      const tot=d?d.items.reduce((s,i)=>s+i.c,0):0;
-      const gst=Math.round(tot*.1);
+  msg('Looks good, send it ✅','out');showT();
+  setTimeout(()=>{hideT();msg('Generating PDF quote...','in');showT();
+    setTimeout(()=>{hideT();
+      const d=lastQuote,tot=d?d.items.reduce((s,i)=>s+i.c,0):0,gst=Math.round(tot*.1);
       const pdfRows=d?d.items.slice(0,5).map(i=>'<div class="pdf-row"><span>'+i.n+'</span><span>$'+i.c.toLocaleString()+'</span></div>').join(''):'';
-      const moreItems=d&&d.items.length>5?'<div style="font-size:9px;color:var(--wa-muted);padding:2px 0;">+ '+(d.items.length-5)+' more items</div>':'';
-
+      const more=d&&d.items.length>5?'<div style="font-size:9px;color:var(--wa-muted);padding:2px 0">+ '+(d.items.length-5)+' more items</div>':'';
       const e=document.createElement('div');e.className='wa-m wa-m-in';e.style.maxWidth='92%';
-      e.innerHTML='Sent to client ✅'+
-        '<div class="pdf-preview">'+
-          '<div class="pdf-hdr">'+
-            '<div class="pdf-icon">📄</div>'+
-            '<div><div class="pdf-name">'+(d?d.t:'Quote')+' — '+id+'.pdf</div><div class="pdf-size">2 pages • '+(d?d.time:'')+'</div></div>'+
-          '</div>'+
-          '<div class="pdf-body">'+pdfRows+moreItems+
-            '<div class="pdf-total"><span>Total inc. GST</span><span>$'+(tot+gst).toLocaleString()+'</span></div>'+
-          '</div>'+
-          '<div class="pdf-footer">'+
-            '<span class="pdf-badge">SENT VIA EMAIL + WHATSAPP</span>'+
-            '<span class="pdf-logo">roen</span>'+
-          '</div>'+
-        '</div>'+
-        '<div class="wa-ts">'+ts()+'</div>';
+      e.innerHTML='Sent to client ✅<div class="pdf-preview"><div class="pdf-hdr"><div class="pdf-icon">📄</div><div><div class="pdf-name">'+(d?d.t:'Quote')+' — '+id+'.pdf</div><div class="pdf-size">2 pages • '+(d?d.time:'')+'</div></div></div><div class="pdf-body">'+pdfRows+more+'<div class="pdf-total"><span>Total inc. GST</span><span>$'+(tot+gst).toLocaleString()+'</span></div></div><div class="pdf-footer"><span class="pdf-badge">SENT VIA EMAIL + WHATSAPP</span><span class="pdf-logo">roen</span></div></div><div class="wa-ts">'+ts()+'</div>';
       M.appendChild(e);M.scrollTop=M.scrollHeight;
-
-      setTimeout(()=>{
-        msg('Project logged in pipeline. Client has 7 days to accept. I\'ll follow up automatically if no response 👍','in');
-        toast('Quote sent — logged in pipeline');
-      },800);
+      setTimeout(()=>{msg('Project logged in pipeline. Client has 7 days to accept. I\'ll follow up automatically if no response 👍','in');toast('Quote sent — logged in pipeline');},800);
     },1200);
   },700);
 }
 function modifyQ(){msg('Can we adjust a few items?','out');showT();setTimeout(()=>{hideT();msg('Sure thing — which items? You can say stuff like "swap to premium tiles", "remove the towel rail", or "add underfloor heating" 🔧','in');busy=false;},700);}
 
-// ─── Scripted multi-turn conversations for autoplay ───
 const scripts={
   bathroom:[
     {d:'out',t:"Need a price on a bathroom reno"},
@@ -569,219 +516,101 @@ const scripts={
   ]
 };
 
-// ─── Play a scripted conversation ───
-// Type out a message char by char in the input field, then send it
-function typeAndSend(text, cb){
-  I.value='';
-  let ci=0;
-  const speed=25+Math.random()*15; // ms per char
-  function typeChar(){
-    if(userOwns){cb&&cb();return;}
-    if(ci<text.length){
-      I.value+=text[ci];ci++;
-      // Scroll input to end
-      I.scrollLeft=I.scrollWidth;
-      setTimeout(typeChar,speed+(Math.random()>0.85?120:0)); // occasional pause
-    }else{
-      // Brief pause then "send"
-      setTimeout(()=>{
-        if(userOwns){cb&&cb();return;}
-        I.value='';
-        msg(text,'out');
-        cb&&cb();
-      },300);
-    }
+// Typing animation for outgoing messages
+function typeAndSend(text,g,cb){
+  I.value='';let ci=0;const spd=25+Math.random()*15;
+  function go(){
+    if(gen!==g){I.value='';return;}
+    if(ci<text.length){I.value+=text[ci];ci++;I.scrollLeft=I.scrollWidth;setTimeout(go,spd+(Math.random()>.85?120:0));}
+    else setTimeout(()=>{if(gen!==g){I.value='';return;}I.value='';msg(text,'out');if(cb)cb();},300);
   }
-  typeChar();
+  go();
 }
 
-function playScript(key, cb){
-  const steps=scripts[key];
-  let i=0;
-  busy=true;
-
+function playScript(key,cb){
+  const steps=scripts[key];if(!steps)return;
+  let i=0;const g=gen;busy=true;
   function next(){
-    if(userOwns)return;
+    if(gen!==g){busy=false;return;}
     if(i>=steps.length){busy=false;if(cb)cb();return;}
-    const step=steps[i];i++;
-
-    if(step.d==='out'){
-      typeAndSend(step.t,()=>{
-        if(userOwns)return;
-        setTimeout(next,400);
-      });
-    }else if(step.d==='in'){
-      showT();
-      setTimeout(()=>{
-        if(userOwns)return;
-        hideT();msg(step.t,'in');
-        setTimeout(next,step.delay||900);
-      },700+Math.random()*500);
-    }else if(step.d==='quote'){
-      showT();
-      setTimeout(()=>{
-        if(userOwns)return;
-        hideT();renderQuote(step.data);
-        setTimeout(()=>{busy=false;if(cb)cb();},200);
-      },1200);
-    }else if(step.d==='voice'){
-      voiceMsg(step.dur||6,step.transcript,()=>{
-        if(userOwns)return;
-        setTimeout(next,400);
-      });
+    const s=steps[i];i++;
+    if(s.d==='out'){
+      typeAndSend(s.t,g,()=>{if(gen===g)setTimeout(next,400);});
+    }else if(s.d==='in'){
+      showT();setTimeout(()=>{if(gen!==g){hideT();return;}hideT();msg(s.t,'in');setTimeout(next,s.delay||900);},700+Math.random()*500);
+    }else if(s.d==='quote'){
+      showT();setTimeout(()=>{if(gen!==g){hideT();return;}hideT();renderQuote(s.data);setTimeout(()=>{busy=false;if(gen===g&&cb)cb();},200);},1200);
+    }else if(s.d==='voice'){
+      voiceMsgAnim(s.dur||6,s.transcript,g,()=>{if(gen===g)setTimeout(next,400);});
     }
   }
   next();
 }
 
-// ─── Smart user input handling (no API needed) ───
-let userContext={size:null,finish:null,type:null,step:0};
+// Kill everything
+function killAll(){gen++;userOwns=true;aT.forEach(t=>clearTimeout(t));aT=[];busy=false;hideT();I.value='';chatState='idle';}
 
+// Smart user input
 const categories={
   bathroom:{kw:['bath','shower','ensuite','toilet','vanity','wet room','laundry'],ask:"How big is the space roughly? And what finish level — budget, mid-range, or premium? 🚿"},
-  kitchen:{kw:['kitchen','cook','benchtop','splashback','cabinetry'],ask:"Nice — how big is the kitchen? And are we talking a full gut or a facelift (new doors, benchtops, splashback)? 🍳"},
-  deck:{kw:['deck','patio','pergola','outdoor','verandah','alfresco'],ask:"Sounds good 👍 How big roughly? And what material — hardwood, treated pine, or composite? Any roofing/pergola over it?"},
-  extension:{kw:['extension','extend','addition','granny','extra room'],ask:"No worries 🏠 How big are we talking? Single or double storey? And what cladding — brick, weatherboard, render?"},
-  office:{kw:['office','commercial','fit-out','fitout','retail','shop','warehouse'],ask:"Good scope 🏢 How big is the space (sqm)? And is this from base build or refurbing existing?"},
-  roof:{kw:['roof','colorbond','gutter','tiles','re-roof','reroof'],ask:"What's the roof area roughly? And what's on there now — tiles, tin, concrete? 🔨"},
-  painting:{kw:['paint','painting','repaint','colour','interior','exterior'],ask:"Interior, exterior, or both? And how many rooms/sqm roughly? Any prep work like patching or sanding? 🎨"},
-  fence:{kw:['fence','fencing','gate','boundary','colourbond'],ask:"How many linear metres? And what type — colorbond, timber paling, aluminium slat? Any demolition of the old fence? 🏗️"},
-  pool:{kw:['pool','swimming','spa','plunge'],ask:"What type — concrete, fibreglass, or plunge? And roughly what size? Any landscaping or decking around it? 🏊"},
-  solar:{kw:['solar','panels','battery','inverter','ev charger'],ask:"How big is the roof? And what system size are you after — 6.6kW, 10kW, 13kW? Battery included? ☀️"},
-  general:{kw:[],ask:"Sounds interesting 👍 Can you give me a bit more detail? Roughly how big is the job, and what trades are involved?"}
+  kitchen:{kw:['kitchen','cook','benchtop','splashback','cabinetry'],ask:"Nice — how big is the kitchen? And are we talking a full gut or a facelift? 🍳"},
+  deck:{kw:['deck','patio','pergola','outdoor','verandah','alfresco'],ask:"Sounds good 👍 How big roughly? And what material — hardwood, treated pine, or composite?"},
+  extension:{kw:['extension','extend','addition','granny','extra room'],ask:"No worries 🏠 How big? Single or double storey? What cladding?"},
+  office:{kw:['office','commercial','fit-out','fitout','retail','shop','warehouse'],ask:"Good scope 🏢 How big (sqm)? Full fit-out or refurb?"},
+  roof:{kw:['roof','colorbond','gutter','tiles','re-roof','reroof'],ask:"What's the roof area? And what's on there now — tiles, tin, concrete? 🔨"},
+  painting:{kw:['paint','painting','repaint','colour','interior','exterior'],ask:"Interior, exterior, or both? How many rooms/sqm? 🎨"},
+  fence:{kw:['fence','fencing','gate','boundary','colourbond'],ask:"How many linear metres? What type — colorbond, timber, aluminium slat? 🏗️"},
+  pool:{kw:['pool','swimming','spa','plunge'],ask:"Concrete, fibreglass, or plunge? Roughly what size? 🏊"},
+  solar:{kw:['solar','panels','battery','inverter','ev charger'],ask:"What system size — 6.6kW, 10kW, 13kW? Battery included? ☀️"},
+  general:{kw:[],ask:"Sounds interesting 👍 Can you give me a bit more detail? Roughly how big is the job?"}
 };
-
-function detectCategory(text){
-  const l=text.toLowerCase();
-  for(const [cat,info] of Object.entries(categories)){
-    if(cat==='general')continue;
-    if(info.kw.some(k=>l.includes(k)))return cat;
-  }
-  return 'general';
+function detectCat(t){const l=t.toLowerCase();for(const[c,v]of Object.entries(categories)){if(c==='general')continue;if(v.kw.some(k=>l.includes(k)))return c;}return'general';}
+function genQuote(cat,text){
+  const l=text.toLowerCase(),pr=l.includes('premium')||l.includes('luxury'),bu=l.includes('budget')||l.includes('cheap'),m=pr?1.4:bu?.7:1,id='Q-'+Math.floor(1900+Math.random()*99);
+  const T={bathroom:{t:"Bathroom Renovation",items:[{n:"Demo",c:2800},{n:"Waterproofing",c:1900},{n:"Tiling",c:4200},{n:"Plumbing",c:3800},{n:"Fixtures",c:4200},{n:"Vanity",c:1800},{n:"Electrical",c:1400},{n:"Paint",c:900}],time:"3-4 WKS",margin:"28%"},kitchen:{t:"Kitchen Renovation",items:[{n:"Demo",c:3200},{n:"Cabinetry",c:12000},{n:"Benchtop",c:4500},{n:"Splashback",c:2200},{n:"Plumbing",c:3000},{n:"Electrical",c:2800},{n:"Appliances",c:1200},{n:"Paint",c:1100}],time:"4-6 WKS",margin:"26%"},deck:{t:"Deck Build",items:[{n:"Footings",c:3500},{n:"Frame",c:5200},{n:"Boards",c:6800},{n:"Stairs & balustrade",c:3200},{n:"Trim",c:1400},{n:"Seal & oil",c:900}],time:"1-2 WKS",margin:"30%"},extension:{t:"Extension",items:[{n:"Footings & slab",c:18000},{n:"Framing",c:14000},{n:"Cladding",c:10000},{n:"Roofing",c:6500},{n:"Electrical",c:4200},{n:"Plumbing",c:3800},{n:"Linings",c:5500},{n:"Flooring",c:4800},{n:"Paint",c:3600}],time:"10-14 WKS",margin:"24%"},office:{t:"Office Fit-Out",items:[{n:"Partitions",c:22000},{n:"Electrical + data",c:16000},{n:"HVAC",c:12000},{n:"Flooring",c:9000},{n:"Joinery",c:8000},{n:"Paint",c:5000},{n:"Compliance",c:4500}],time:"6-10 WKS",margin:"26%"},roof:{t:"Roof Replacement",items:[{n:"Scaffolding",c:4200},{n:"Strip",c:5500},{n:"Battens",c:3800},{n:"Roofing",c:16000},{n:"Flashing",c:2800},{n:"Gutters",c:4500},{n:"Insulation",c:3600},{n:"Clean-up",c:1800}],time:"5-7 DAYS",margin:"30%"},painting:{t:"Painting",items:[{n:"Prep",c:2400},{n:"Primer",c:1800},{n:"2x coats",c:4200},{n:"Trim",c:1600},{n:"Clean-up",c:600}],time:"3-5 DAYS",margin:"32%"},fence:{t:"Fencing",items:[{n:"Remove old",c:1800},{n:"Posts",c:3200},{n:"Panels",c:5400},{n:"Gate",c:1200},{n:"Clean-up",c:600}],time:"2-3 DAYS",margin:"30%"},pool:{t:"Pool Install",items:[{n:"Excavation",c:8000},{n:"Shell",c:28000},{n:"Plumbing",c:6500},{n:"Electrical",c:3500},{n:"Coping",c:5000},{n:"Fencing",c:4200},{n:"Landscaping",c:3800}],time:"8-12 WKS",margin:"22%"},solar:{t:"Solar Install",items:[{n:"Panels",c:4200},{n:"Inverter",c:1800},{n:"Mounting",c:1200},{n:"Electrical",c:1500},{n:"Compliance",c:600}],time:"1-2 DAYS",margin:"28%"},general:{t:"Construction Project",items:[{n:"Assessment",c:3500},{n:"Materials",c:12000},{n:"Labour",c:15000},{n:"Mgmt",c:3200},{n:"Equipment",c:2800},{n:"Compliance",c:1800},{n:"Clean-up",c:1200}],time:"4-8 WKS",margin:"25%"}};
+  const tmpl=T[cat]||T.general;return{t:tmpl.t,id,items:tmpl.items.map(i=>({n:i.n,c:Math.round(i.c*m/50)*50})),time:tmpl.time,margin:tmpl.margin};
 }
 
-function generateQuote(cat,text){
-  const l=text.toLowerCase();
-  const premium=l.includes('premium')||l.includes('high end')||l.includes('luxury');
-  const budget=l.includes('budget')||l.includes('cheap')||l.includes('basic');
-  const mult=premium?1.4:budget?0.7:1;
-  const id='Q-'+Math.floor(1900+Math.random()*99);
-
-  const templates={
-    bathroom:{t:"Bathroom Renovation",items:[{n:"Demo & strip-out",c:2800},{n:"Waterproofing",c:1900},{n:"Tiling",c:4200},{n:"Plumbing",c:3800},{n:"Fixtures & fittings",c:4200},{n:"Vanity + tapware",c:1800},{n:"Electrical",c:1400},{n:"Paint & finish",c:900}],time:"3-4 WKS",margin:"28%"},
-    kitchen:{t:"Kitchen Renovation",items:[{n:"Demo & strip-out",c:3200},{n:"Cabinetry",c:12000},{n:"Stone benchtop",c:4500},{n:"Splashback tiling",c:2200},{n:"Plumbing",c:3000},{n:"Electrical + lighting",c:2800},{n:"Appliance install",c:1200},{n:"Paint & finish",c:1100}],time:"4-6 WKS",margin:"26%"},
-    deck:{t:"Deck Construction",items:[{n:"Site prep & footings",c:3500},{n:"Frame & bearers",c:5200},{n:"Decking boards",c:6800},{n:"Stairs & balustrade",c:3200},{n:"Fascia & trim",c:1400},{n:"Sealing & oil",c:900}],time:"1-2 WKS",margin:"30%"},
-    extension:{t:"Extension Build",items:[{n:"Footings & slab",c:18000},{n:"Framing",c:14000},{n:"Cladding",c:10000},{n:"Roofing",c:6500},{n:"Electrical",c:4200},{n:"Plumbing",c:3800},{n:"Internal linings",c:5500},{n:"Flooring",c:4800},{n:"Paint & finish",c:3600}],time:"10-14 WKS",margin:"24%"},
-    office:{t:"Commercial Fit-Out",items:[{n:"Partitions & walls",c:22000},{n:"Electrical + data",c:16000},{n:"HVAC",c:12000},{n:"Flooring",c:9000},{n:"Joinery & fixtures",c:8000},{n:"Paint & finish",c:5000},{n:"Fire & compliance",c:4500}],time:"6-10 WKS",margin:"26%"},
-    roof:{t:"Roof Replacement",items:[{n:"Scaffolding",c:4200},{n:"Strip existing",c:5500},{n:"Battens",c:3800},{n:"New roofing",c:16000},{n:"Flashing & ridge",c:2800},{n:"Gutters",c:4500},{n:"Insulation",c:3600},{n:"Clean-up",c:1800}],time:"5-7 DAYS",margin:"30%"},
-    painting:{t:"Painting Works",items:[{n:"Surface prep",c:2400},{n:"Primer coat",c:1800},{n:"2x finish coats",c:4200},{n:"Trim & detail work",c:1600},{n:"Clean-up",c:600}],time:"3-5 DAYS",margin:"32%"},
-    fence:{t:"Fencing Installation",items:[{n:"Remove old fence",c:1800},{n:"Posts & footings",c:3200},{n:"Rails & panels",c:5400},{n:"Gate",c:1200},{n:"Clean-up",c:600}],time:"2-3 DAYS",margin:"30%"},
-    pool:{t:"Pool Installation",items:[{n:"Excavation",c:8000},{n:"Shell / structure",c:28000},{n:"Plumbing & filtration",c:6500},{n:"Electrical",c:3500},{n:"Coping & paving",c:5000},{n:"Fencing (compliance)",c:4200},{n:"Landscaping",c:3800}],time:"8-12 WKS",margin:"22%"},
-    solar:{t:"Solar Installation",items:[{n:"Panels (6.6kW)",c:4200},{n:"Inverter",c:1800},{n:"Mounting & racking",c:1200},{n:"Electrical + metering",c:1500},{n:"Compliance & inspect",c:600}],time:"1-2 DAYS",margin:"28%"},
-    general:{t:"Construction Project",items:[{n:"Site assessment",c:3500},{n:"Materials",c:12000},{n:"Skilled labour",c:15000},{n:"Project management",c:3200},{n:"Equipment hire",c:2800},{n:"Compliance",c:1800},{n:"Clean-up",c:1200}],time:"4-8 WKS",margin:"25%"}
-  };
-
-  const tmpl=templates[cat]||templates.general;
-  const items=tmpl.items.map(i=>({n:i.n,c:Math.round(i.c*mult/50)*50}));
-  return{t:tmpl.t,id,items,time:tmpl.time,margin:tmpl.margin};
-}
-
-let chatState='idle'; // idle, asked, ready
-let chatCat='general';
+let chatState='idle',chatCat='general';
 
 function send(){
-  if(busy)return;stopAuto();
-  const t=I.value.trim();if(!t)return;I.value='';
-  msg(t,'out');
-
-  const l=t.toLowerCase();
-  busy=true;
-
+  killAll();
+  const t=I.value.trim();if(!t)return;I.value='';msg(t,'out');
+  const l=t.toLowerCase();busy=true;
   if(chatState==='idle'){
-    // First message — detect what they want, ask questions
-    chatCat=detectCategory(t);
-
-    // Check if they already gave lots of detail (long message = probably enough)
-    if(t.length>80){
-      chatState='ready';
-      showT();
-      setTimeout(()=>{hideT();msg("Nice — that's plenty of detail 👍 Let me price that up...",'in');
-        showT();
-        setTimeout(()=>{hideT();renderQuote(generateQuote(chatCat,t));busy=false;chatState='idle';},1200);
-      },700);
-    }else{
-      chatState='asked';
-      showT();
-      setTimeout(()=>{hideT();msg(categories[chatCat].ask,'in');busy=false;},600);
-    }
+    chatCat=detectCat(t);
+    if(t.length>80){showT();setTimeout(()=>{hideT();msg("Nice — plenty of detail 👍 Pricing now...",'in');showT();setTimeout(()=>{hideT();renderQuote(genQuote(chatCat,t));busy=false;chatState='idle';},1200);},700);}
+    else{chatState='asked';showT();setTimeout(()=>{hideT();msg(categories[chatCat].ask,'in');busy=false;},600);}
   }else if(chatState==='asked'){
-    // They answered our question — ask one more or quote
     if(t.length>30||l.includes('mid')||l.includes('premium')||l.includes('budget')||l.includes('sqm')||l.match(/\d+/)){
-      chatState='ready';
-      showT();
-      const acks=["Got it 👍","Sweet, that's everything I need","Nice one — pricing it now 🔍","Easy, pulling rates now"];
-      setTimeout(()=>{hideT();msg(acks[Math.floor(Math.random()*acks.length)],'in');
-        showT();
-        setTimeout(()=>{hideT();renderQuote(generateQuote(chatCat,t));busy=false;chatState='idle';},1200);
-      },600);
+      chatState='idle';showT();const a=["Got it 👍","Sweet — pricing now 🔍","Easy, pulling rates"];
+      setTimeout(()=>{hideT();msg(a[Math.floor(Math.random()*a.length)],'in');showT();setTimeout(()=>{hideT();renderQuote(genQuote(chatCat,t));busy=false;},1200);},600);
     }else{
-      // Need a bit more
-      const followups={
-        bathroom:"What about fixtures — freestanding or built-in bath? And frameless shower screen? 🤔",
-        kitchen:"Stone or laminate benchtops? And how many linear metres of cabinetry roughly?",
-        deck:"Roughly how many sqm? And any stairs or built-in seating?",
-        extension:"Single or double storey? And what's the cladding — brick, render, weatherboard?",
-        office:"How many private offices vs open plan desks? Any server room or AV needed?",
-        roof:"Just the sheets, or gutters and insulation too?",
-        painting:"How many rooms? And any feature walls or special finishes?",
-        fence:"How many metres roughly? And what height?",
-        pool:"Concrete, fibreglass, or plunge pool?",
-        solar:"What system size — 6.6kW is standard, or going bigger?",
-        general:"Can you give me a rough size and what trades are involved? 🤔"
-      };
-      showT();
-      setTimeout(()=>{hideT();msg(followups[chatCat]||followups.general,'in');busy=false;},600);
+      const f={bathroom:"Freestanding or built-in bath? Frameless screen? 🤔",kitchen:"Stone or laminate benchtops?",deck:"How many sqm? Any stairs?",extension:"Single or double storey?",office:"How many offices vs open plan?",roof:"Gutters and insulation too?",general:"Rough size and what trades? 🤔"};
+      showT();setTimeout(()=>{hideT();msg(f[chatCat]||f.general,'in');busy=false;},600);
     }
   }else{
-    // Already quoted — they're following up
-    chatState='idle';
-    if(l.includes('adjust')||l.includes('change')||l.includes('modify')||l.includes('remove')||l.includes('add')||l.includes('swap')||l.includes('upgrade')){
-      showT();
-      setTimeout(()=>{hideT();msg("No worries — making those changes and regenerating... 🔧",'in');
-        showT();
-        setTimeout(()=>{hideT();renderQuote(generateQuote(chatCat,t));busy=false;},1200);
-      },600);
-    }else{
-      chatCat=detectCategory(t);
-      if(t.length>80){
-        showT();
-        setTimeout(()=>{hideT();msg("Let me price that up for you 👍",'in');
-          showT();
-          setTimeout(()=>{hideT();renderQuote(generateQuote(chatCat,t));busy=false;},1200);
-        },600);
-      }else{
-        chatState='asked';
-        showT();
-        setTimeout(()=>{hideT();msg(categories[chatCat].ask,'in');busy=false;},600);
-      }
-    }
+    chatState='idle';chatCat=detectCat(t);
+    showT();setTimeout(()=>{hideT();msg("Pricing that up 👍",'in');showT();setTimeout(()=>{hideT();renderQuote(genQuote(chatCat,t));busy=false;},1200);},600);
   }
 }
 
-// ─── Preset buttons ───
-function preset(k){stopAuto();if(busy)return;playScript(k);}
+function preset(k){
+  killAll();
+  resetChat();
+  userOwns=true;
+  const g=++gen;
+  setTimeout(()=>{if(gen===g)playScript(k);},300);
+}
 
-// ─── Autoplay ───
-function stopAuto(){userOwns=true;aT.forEach(t=>clearTimeout(t));aT=[];chatState='idle';}
-I.addEventListener('focus',stopAuto);
-I.addEventListener('input',stopAuto);
+I.addEventListener('focus',killAll);
+
+function resetChat(){M.innerHTML='<div class="wa-date">Today</div><div class="wa-m wa-m-in">Hey 👋 Describe any job and I\'ll price it for you.<div class="wa-ts">now</div></div>';}
 
 const keys=['bathroom','voice','pricing','extension','suppliers','office','roof'];let li=0;
-function resetChat(){M.innerHTML='<div class="wa-date">Today</div><div class="wa-m wa-m-in">Hey 👋 Describe any job and I\'ll price it for you.<div class="wa-ts">now</div></div>';}
 function loop(){
-  if(userOwns)return;
-  const k=keys[li%keys.length];li++;
-  playScript(k,()=>{if(userOwns)return;aT.push(setTimeout(()=>{if(userOwns)return;resetChat();aT.push(setTimeout(loop,600));},4000));});
+  if(userOwns)return;const g=gen;const k=keys[li%keys.length];li++;
+  playScript(k,()=>{if(gen!==g||userOwns)return;aT.push(setTimeout(()=>{if(gen!==g||userOwns)return;resetChat();aT.push(setTimeout(loop,600));},4000));});
 }
 aT.push(setTimeout(loop,1200));
 </script>
