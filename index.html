@@ -152,13 +152,13 @@ body::before{
 
 <script>
 var demos = [
-  {file:'demo-whatsapp-to-quote.html', icon:'💬', title:'WhatsApp to Quote', desc:'Describe a job on WhatsApp, get an itemised quote back in seconds. Voice or text.', tag:'@quote agent'},
-  {file:'demo-speech-to-rfi.html', icon:'🎙️', title:'Speech to RFI', desc:'Voice note or photo from site turns into a formal RFI, routed to the right consultant.', tag:'@rfi agent'},
-  {file:'demo-change-orders.html', icon:'📋', title:'Change Orders', desc:'Describe the change — roen calculates cost impact, schedule impact, and drafts the CO.', tag:'@co agent'},
-  {file:'demo-contracts.html', icon:'📑', title:'Contract Management', desc:'Ask any contract question in plain language. Get the exact clause reference back instantly.', tag:'@contract agent'},
-  {file:'demo-schedule.html', icon:'📅', title:'Schedule Intelligence', desc:'Report delays or progress. roen recalculates the critical path and notifies affected trades.', tag:'@schedule agent'},
-  {file:'demo-budget.html', icon:'💰', title:'Budget Tracker', desc:'Real-time budget status, cost-to-complete, and margin tracking from your phone.', tag:'@budget agent'},
-  {file:'demo-daily-logs.html', icon:'📝', title:'Daily Logs', desc:'Walk the site, send a voice note. roen writes the formal daily report automatically.', tag:'@workflow agent'}
+  {file:'demo-whatsapp-to-quote.html', icon:'💬', title:'WhatsApp to Quote', desc:'Describe a job on WhatsApp, get an itemised quote back in seconds. Voice or text.', tag:'@quote agent', color:'#00C853'},
+  {file:'demo-speech-to-rfi.html', icon:'🎙️', title:'Speech to RFI', desc:'Voice note or photo from site turns into a formal RFI, routed to the right consultant.', tag:'@rfi agent', color:'#4A8FD4'},
+  {file:'demo-change-orders.html', icon:'📋', title:'Change Orders', desc:'Describe the change — roen calculates cost impact, schedule impact, and drafts the CO.', tag:'@co agent', color:'#9C4DCC'},
+  {file:'demo-contracts.html', icon:'📑', title:'Contract Management', desc:'Ask any contract question in plain language. Get the exact clause reference back instantly.', tag:'@contract agent', color:'#3D6FD4'},
+  {file:'demo-schedule.html', icon:'📅', title:'Schedule Intelligence', desc:'Report delays or progress. roen recalculates the critical path and notifies affected trades.', tag:'@schedule agent', color:'#00BFA5'},
+  {file:'demo-budget.html', icon:'💰', title:'Budget Tracker', desc:'Real-time budget status, cost-to-complete, and margin tracking from your phone.', tag:'@budget agent', color:'#7C6BC0'},
+  {file:'demo-daily-logs.html', icon:'📝', title:'Daily Logs', desc:'Walk the site, send a voice note. roen writes the formal daily report automatically.', tag:'@workflow agent', color:'#A0896A'}
 ];
 
 var container = document.getElementById('capsules');
@@ -166,7 +166,8 @@ demos.forEach(function(d) {
   var el = document.createElement('a');
   el.className = 'capsule';
   el.href = d.file;
-  el.innerHTML = '<div class="cap-icon">' + d.icon + '</div><div class="cap-info"><div class="cap-title">' + d.title + '</div><div class="cap-desc">' + d.desc + '</div><span class="cap-tag">' + d.tag + '</span></div><span class="cap-arrow">›</span>';
+  el.style.borderLeft = '3px solid ' + d.color;
+  el.innerHTML = '<div class="cap-icon">' + d.icon + '</div><div class="cap-info"><div class="cap-title">' + d.title + '</div><div class="cap-desc">' + d.desc + '</div><span class="cap-tag" style="color:' + d.color + ';background:' + d.color + '18">' + d.tag + '</span></div><span class="cap-arrow">›</span>';
   container.appendChild(el);
 });
 

@@ -26,14 +26,14 @@
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 html{-webkit-font-smoothing:antialiased;}
-body{font-family:var(--body);background:var(--black);color:var(--white);min-height:100vh;overflow-x:hidden;}
+body{font-family:var(--body);background:linear-gradient(160deg,#111009 0%,#0a0a0a 65%);color:var(--white);min-height:100vh;overflow-x:hidden;}
 
 /* Atmospheric bg glow — matching pitch deck */
 body::before{
   content:'';position:fixed;top:0;left:0;right:0;bottom:0;z-index:0;pointer-events:none;
   background:
-    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(0,200,83,0.06) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 50% at var(--gx,50%) var(--gy,40%), rgba(20,80,70,0.35) 0%, transparent 65%);
+    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(120,100,55,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at var(--gx,50%) var(--gy,40%), rgba(58,48,28,0.32) 0%, transparent 65%);
   animation:glowDrift 12s ease-in-out infinite alternate;
 }
 @keyframes glowDrift{
