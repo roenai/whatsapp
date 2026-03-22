@@ -70,13 +70,14 @@ body::before{
 .capsule{
   padding:24px 28px;border:1px solid var(--border);border-radius:12px;
   background:var(--surface);cursor:pointer;transition:all .25s;
-  display:flex;align-items:flex-start;gap:14px;text-decoration:none;color:inherit;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;gap:14px;text-decoration:none;color:inherit;
 }
 .capsule:hover{border-color:rgba(0,200,83,.35);background:rgba(0,200,83,.03);transform:translateY(-2px);}
 .capsule.active{border-color:var(--green);background:rgba(0,200,83,.06);}
 
-.cap-icon{font-size:24px;flex-shrink:0;margin-top:2px;}
-.cap-info{flex:1;min-width:0;}
+.cap-icon{font-size:24px;}
+.cap-info{}
 .cap-title{font-family:var(--heading);font-size:14px;font-weight:600;color:var(--white);margin-bottom:3px;}
 .cap-desc{font-size:11.5px;font-weight:300;color:var(--gray);line-height:1.5;}
 .cap-tag{
@@ -91,8 +92,8 @@ body::before{
 .capsule-soon{
   padding:24px 28px;border:1px dashed var(--dim);border-radius:12px;
   background:transparent;cursor:default;
-  display:flex;align-items:center;justify-content:center;gap:10px;
-  opacity:0.45;pointer-events:none;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;gap:10px;opacity:0.45;pointer-events:none;
 }
 .capsule-soon .cap-icon{font-size:20px;}
 .capsule-soon .cap-title{font-family:var(--heading);font-size:13px;font-weight:400;color:var(--gray);}
@@ -165,7 +166,7 @@ demos.forEach(function(d) {
   var el = document.createElement('a');
   el.className = 'capsule';
   el.href = d.file;
-  el.innerHTML = '<div class="cap-icon">' + d.icon + '</div><div class="cap-info"><div class="cap-title">' + d.title + '</div><div class="cap-desc">' + d.desc + '</div><span class="cap-tag" style="color:' + d.color + '">' + d.tag + '</span></div><span class="cap-arrow">›</span>';
+  el.innerHTML = '<div class="cap-icon">' + d.icon + '</div><div class="cap-info"><div class="cap-title">' + d.title + '</div><div class="cap-desc">' + d.desc + '</div><span class="cap-tag" style="color:' + d.color + '">' + d.tag + '</span></div>';
   container.appendChild(el);
 });
 
