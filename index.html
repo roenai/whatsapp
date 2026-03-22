@@ -71,6 +71,7 @@ body::before{
   padding:20px 24px;border:1px solid var(--border);border-radius:12px;
   background:var(--surface);cursor:pointer;transition:all .25s;
   display:flex;align-items:flex-start;gap:14px;text-decoration:none;color:inherit;
+  height:120px;overflow:hidden;
 }
 .capsule:hover{border-color:rgba(0,200,83,.35);background:rgba(0,200,83,.03);transform:translateY(-2px);}
 .capsule.active{border-color:var(--green);background:rgba(0,200,83,.06);}
@@ -92,7 +93,7 @@ body::before{
   padding:20px 24px;border:1px dashed var(--dim);border-radius:12px;
   background:transparent;cursor:default;
   display:flex;align-items:center;justify-content:center;gap:10px;
-  opacity:0.45;pointer-events:none;
+  opacity:0.45;pointer-events:none;height:120px;
 }
 .capsule-soon .cap-icon{font-size:20px;}
 .capsule-soon .cap-title{font-family:var(--heading);font-size:13px;font-weight:400;color:var(--gray);}
