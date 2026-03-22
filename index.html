@@ -47,6 +47,24 @@ body::before{
 .nav-right{font-family:var(--mono);font-size:9px;font-weight:400;color:var(--dim);text-transform:uppercase;letter-spacing:2px;}
 
 .hero{text-align:center;padding:48px 48px 20px;max-width:720px;margin:0 auto;}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--mono);font-size:10px;font-weight:400;
+  color:var(--gray);letter-spacing:1.5px;text-transform:uppercase;
+  padding:7px 14px;border-radius:100px;
+  border:1px solid rgba(255,255,255,0.1);
+  background:rgba(255,255,255,0.03);
+  margin-bottom:20px;
+}
+.live-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--green);flex-shrink:0;
+  animation:livePulse 2s ease-in-out infinite;
+}
+@keyframes livePulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(0,200,83,0.6);opacity:1;}
+  50%{box-shadow:0 0 0 5px rgba(0,200,83,0);opacity:0.8;}
+}
 .hero h1{
   font-size:clamp(32px,5vw,52px);
   font-weight:500;line-height:1.1;letter-spacing:-0.5px;margin-bottom:16px;
@@ -127,6 +145,7 @@ body::before{
 <!-- HOME VIEW -->
 <div id="homeView">
   <div class="hero">
+    <div class="hero-badge"><span class="live-dot"></span>autonomous construction</div>
     <h1>See the agents in action</h1>
     <p>Each roen agent handles a different part of the construction workflow. Pick one below to see how it works — live, interactive, from a phone.</p>
   </div>
