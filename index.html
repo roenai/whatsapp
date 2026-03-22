@@ -65,7 +65,7 @@ body::before{
   padding:2px 7px;border-radius:4px;
 }
 
-.capsules{max-width:900px;margin:0 auto;padding:32px 48px 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;}
+.capsules{max-width:900px;margin:0 auto;padding:32px 48px 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;}
 
 .capsule{
   padding:20px 24px;border:1px solid var(--border);border-radius:12px;
@@ -88,6 +88,14 @@ body::before{
 .cap-arrow{align-self:center;font-size:18px;color:var(--dim);transition:all .2s;flex-shrink:0;}
 .capsule:hover .cap-arrow{color:var(--green);transform:translateX(3px);}
 
+.capsule-soon{
+  padding:20px 24px;border:1px dashed var(--dim);border-radius:12px;
+  background:transparent;cursor:default;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  opacity:0.45;pointer-events:none;
+}
+.capsule-soon .cap-icon{font-size:20px;}
+.capsule-soon .cap-title{font-family:var(--heading);font-size:13px;font-weight:400;color:var(--gray);}
 
 .foot{padding:24px 48px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;margin-top:40px;}
 .foot-logo{font-family:var(--logo);font-size:15px;font-weight:600;color:var(--dim);text-decoration:none;display:flex;align-items:center;gap:5px;}
@@ -160,6 +168,11 @@ demos.forEach(function(d) {
   el.innerHTML = '<div class="cap-icon">' + d.icon + '</div><div class="cap-info"><div class="cap-title">' + d.title + '</div><div class="cap-desc">' + d.desc + '</div><span class="cap-tag">' + d.tag + '</span></div><span class="cap-arrow">›</span>';
   container.appendChild(el);
 });
+
+var soon = document.createElement('div');
+soon.className = 'capsule-soon';
+soon.innerHTML = '<div class="cap-icon">✦</div><div class="cap-title">More Coming Soon</div>';
+container.appendChild(soon);
 </script>
 </body>
 </html>
