@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>roen — Budget Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+@font-face {
+  font-family:'Cooper BT';
+  src:url('https://db.onlinewebfonts.com/t/2a88cde81e30e1095a498e3aa7ae3a0d.woff2') format('woff2');
+  font-weight:600; font-style:normal; font-display:swap;
+}
+:root{
+  --black:#0A0A0A;--white:#FFFFFF;--green:#00C853;
+  --gray:#8A8A8A;--surface:#141414;--border:#2A2A2A;--dim:#4a4a4a;
+  --logo:'Cooper BT',Georgia,serif;
+  --heading:'Open Sans',system-ui,sans-serif;
+  --body:'Open Sans',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',monospace;
+  --wa-bg:#0b141a;--wa-panel:#1f2c34;--wa-out:#005c4b;
+  --wa-text:#e9edef;--wa-muted:#8696a0;--wa-teal:#00a884;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{-webkit-font-smoothing:antialiased;}
+body{font-family:var(--body);background:var(--black);color:var(--white);min-height:100vh;overflow-x:hidden;}
+
+/* Atmospheric bg glow — matching pitch deck */
+body::before{
+  content:'';position:fixed;top:0;left:0;right:0;bottom:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(0,200,83,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at var(--gx,50%) var(--gy,40%), rgba(20,80,70,0.35) 0%, transparent 65%);
+  animation:glowDrift 12s ease-in-out infinite alternate;
+}
+@keyframes glowDrift{
+  0%{--gx:40%;--gy:35%;}
+  25%{--gx:55%;--gy:45%;}
+  50%{--gx:60%;--gy:30%;}
+  75%{--gx:45%;--gy:50%;}
+  100%{--gx:50%;--gy:35%;}
+}
+@property --gx{syntax:'<percentage>';inherits:false;initial-value:50%;}
+@property --gy{syntax:'<percentage>';inherits:false;initial-value:40%;}
+.page{position:relative;z-index:1;}
+
+/* Nav */
+.nav{padding:12px 48px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);}
+.nav-logo{color:var(--dim);text-decoration:none;font-family:var(--logo);font-size:20px;font-weight:600;display:flex;align-items:center;gap:6px;}
+.nav-dot{width:6px;height:6px;border-radius:50%;background:var(--green);}
+.nav-right{font-family:var(--mono);font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:1.5px;}
+
+/* Hero */
+.hero{max-width:700px;margin:0 auto;padding:48px 48px 20px;text-align:center;}
+.hero h1{font-family:var(--heading);font-size:44px;font-weight:600;color:var(--white);letter-spacing:-.8px;line-height:1.15;margin-bottom:14px;}
+.hero p{font-size:15px;font-weight:300;color:var(--gray);line-height:1.7;}
+
+/* Demo layout */
+.demo{max-width:1080px;margin:0 auto;padding:0 48px 48px;display:flex;flex-direction:column;align-items:center;gap:36px;}
+
+/* Phone */
+.phone{width:370px;max-width:100%;height:700px;background:#000;border-radius:46px;padding:9px;position:relative;box-shadow:0 0 0 1px rgba(255,255,255,.04),0 50px 100px -20px rgba(0,0,0,.6);}
+.phone-island{width:86px;height:24px;background:#1a1a1a;border-radius:13px;position:absolute;top:15px;left:50%;transform:translateX(-50%);z-index:11;}
+.phone-screen{width:100%;height:100%;background:var(--wa-bg);border-radius:38px;overflow:hidden;display:flex;flex-direction:column;}
+
+/* WA chrome */
+.wa-hdr{background:var(--wa-panel);padding:50px 12px 9px;display:flex;align-items:center;gap:9px;}
+.wa-back{color:var(--wa-teal);font-size:17px;font-weight:300;}
+.wa-av{width:32px;height:32px;border-radius:50%;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-family:var(--logo);font-size:13px;font-weight:600;color:var(--white);}
+.wa-info{flex:1;}
+.wa-name{font-size:14px;font-weight:500;color:var(--wa-text);}
+.wa-stat{font-size:10px;color:var(--wa-teal);display:flex;align-items:center;gap:3px;}
+.wa-sd{width:3px;height:3px;border-radius:50%;background:var(--green);}
+
+.wa-msgs{flex:1;overflow-y:auto;padding:10px 9px;display:flex;flex-direction:column;gap:2px;scrollbar-width:none;}
+.wa-msgs::-webkit-scrollbar{display:none;}
+.wa-date{align-self:center;padding:3px 9px;border-radius:5px;background:rgba(255,255,255,.03);font-size:9.5px;color:var(--wa-muted);font-weight:500;margin:4px 0;}
+.wa-m{max-width:86%;padding:6px 9px 3px;border-radius:7px;font-size:12.5px;line-height:1.5;animation:mIn .3s cubic-bezier(.16,1,.3,1);}
+@keyframes mIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+.wa-m-out{align-self:flex-end;background:var(--wa-out);color:var(--wa-text);border-bottom-right-radius:2px;}
+.wa-m-in{align-self:flex-start;background:var(--wa-panel);color:var(--wa-text);border-bottom-left-radius:2px;}
+.wa-ts{font-size:8.5px;color:rgba(255,255,255,.18);text-align:right;margin-top:1px;}
+.wa-ck{color:rgba(83,176,220,.5);}
+.typing{display:flex;gap:3px;padding:9px 12px;align-self:flex-start;background:var(--wa-panel);border-radius:7px;border-bottom-left-radius:2px;}
+.td{width:4px;height:4px;background:var(--wa-muted);border-radius:50%;animation:tB 1.4s infinite;}
+.td:nth-child(2){animation-delay:.15s;}.td:nth-child(3){animation-delay:.3s;}
+@keyframes tB{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-3px);}}
+
+/* Budget Card */
+.bc{background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.05);border-radius:8px;padding:10px;margin-top:4px;}
+.bc-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid rgba(255,255,255,.05);}
+.bc-title{font-weight:600;font-size:11.5px;color:var(--wa-text);}
+.bc-id{font-family:var(--mono);font-size:8px;color:var(--wa-teal);font-weight:400;letter-spacing:.5px;}
+.bc-row{display:flex;justify-content:space-between;padding:2px 0;font-size:10.5px;}
+.bc-row-l{color:var(--wa-muted);}.bc-row-v{font-weight:600;color:var(--wa-text);font-variant-numeric:tabular-nums;}
+.bc-codes{margin-top:5px;padding-top:5px;border-top:1px solid rgba(255,255,255,.05);}
+.bc-code{display:flex;justify-content:space-between;align-items:center;padding:2.5px 0;font-size:9.5px;}
+.bc-code-name{color:var(--wa-muted);}
+.bc-code-stat{display:flex;align-items:center;gap:3px;}
+.bc-indicator{width:6px;height:6px;border-radius:50%;}
+.bc-indicator.green{background:#00C853;}
+.bc-indicator.amber{background:#FFC107;}
+.bc-indicator.red{background:#FF3B30;}
+.bc-sep{height:1px;background:rgba(255,255,255,.05);margin:4px 0;}
+.bc-total{display:flex;justify-content:space-between;padding-top:5px;margin-top:3px;border-top:1px solid rgba(255,255,255,.07);font-weight:700;font-size:12px;color:var(--wa-text);}
+.bc-total span:last-child{color:var(--green);}
+.bc-meta{display:flex;gap:12px;margin-top:5px;font-size:8px;color:var(--wa-muted);font-family:var(--mono);letter-spacing:.3px;}
+.bc-btns{display:flex;gap:4px;margin-top:7px;}
+.bc-btn{padding:6px 11px;border-radius:6px;font-size:9.5px;font-weight:600;cursor:pointer;border:none;font-family:var(--body);transition:all .2s;}
+.bc-go{background:var(--green);color:var(--black);}.bc-go:hover{filter:brightness(1.1);}
+.bc-ed{background:rgba(255,255,255,.08);color:var(--wa-text);}.bc-ed:hover{background:rgba(255,255,255,.12);}
+
+/* Input */
+.wa-bar{padding:6px 9px;background:var(--wa-panel);display:flex;gap:6px;align-items:center;}
+.wa-inp{flex:1;padding:8px 13px;border-radius:18px;border:none;background:#2a3942;color:var(--wa-text);font-size:13px;font-family:var(--body);outline:none;}
+.wa-inp:focus{background:#2f4050;}
+.wa-inp::placeholder{color:var(--wa-muted);}
+.wa-send{width:32px;height:32px;border-radius:50%;background:var(--wa-teal);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .15s;flex-shrink:0;}
+.wa-send:hover{transform:scale(1.06);}
+.wa-send svg{fill:#fff;width:13px;height:13px;}
+
+/* Presets — 5 pills */
+.presets{display:flex;flex-direction:column;align-items:center;gap:8px;}
+.preset-row{display:flex;gap:8px;justify-content:center;}
+.pill{
+  padding:10px 20px;border-radius:8px;
+  background:transparent;border:1px solid rgba(255,255,255,.35);
+  font-size:13px;font-weight:400;color:#ddd;
+  cursor:pointer;font-family:var(--body);transition:all .25s;
+  display:flex;align-items:center;gap:6px;
+}
+.pill:hover{border-color:rgba(255,255,255,.7);color:var(--white);background:rgba(255,255,255,.05);}
+.pill-emoji{font-size:15px;}
+
+/* Stats — matching pitch deck layout */
+.stats-section{max-width:1000px;margin:0 auto;padding:40px 48px;}
+.stats-frame{
+  border:1px solid var(--border);border-radius:12px;
+  padding:40px 48px;background:var(--surface);
+  display:flex;gap:0;
+}
+.stat-block{flex:1;text-align:center;}
+.stat-block+.stat-block{border-left:1px solid var(--border);}
+.stat-val{font-family:var(--heading);font-size:36px;font-weight:600;color:var(--white);letter-spacing:-.5px;}
+.stat-lbl{font-family:var(--mono);font-size:8px;font-weight:400;color:var(--dim);text-transform:uppercase;letter-spacing:2px;margin-top:6px;}
+.stat-desc{font-size:12px;font-weight:300;color:var(--gray);line-height:1.5;margin-top:8px;max-width:200px;margin-left:auto;margin-right:auto;}
+
+/* How */
+.how{max-width:680px;margin:0 auto;padding:40px 48px 48px;text-align:center;}
+.how h2{font-family:var(--heading);font-size:24px;font-weight:600;color:var(--white);margin-bottom:24px;}
+.how-steps{display:flex;flex-direction:column;gap:12px;text-align:left;}
+.how-step{display:flex;gap:12px;align-items:flex-start;}
+.how-num{font-family:var(--mono);font-size:9px;font-weight:400;color:var(--dim);width:18px;flex-shrink:0;padding-top:3px;}
+.how-txt{font-size:13px;font-weight:300;color:var(--gray);line-height:1.6;}
+.how-txt strong{font-weight:600;color:var(--white);}
+
+/* Showcase */
+.showcase{max-width:800px;margin:0 auto;padding:40px 48px 48px;}
+.showcase h2{font-family:var(--heading);font-size:22px;font-weight:600;color:var(--white);text-align:center;margin-bottom:8px;}
+.showcase-sub{font-size:14px;font-weight:300;color:var(--gray);text-align:center;margin-bottom:32px;line-height:1.6;}
+.showcase-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.sc-card{padding:20px;border:1px solid var(--border);border-radius:10px;background:var(--surface);transition:border-color .2s;display:flex;flex-direction:column;min-height:120px;}
+.sc-card:hover{border-color:rgba(255,255,255,.12);}
+.sc-emoji{font-size:20px;margin-bottom:10px;}
+.sc-title{font-family:var(--heading);font-size:13px;font-weight:600;color:var(--white);margin-bottom:4px;}
+.sc-desc{font-size:12px;font-weight:300;color:var(--gray);line-height:1.5;}
+@media(max-width:600px){.showcase-grid{grid-template-columns:1fr;}.showcase{padding:28px 24px 36px;}}
+
+/* Footer */
+.foot{padding:24px 48px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.foot-logo{font-family:var(--logo);font-size:15px;font-weight:600;color:var(--dim);text-decoration:none;display:flex;align-items:center;gap:5px;}
+.foot-d{width:3px;height:3px;border-radius:50%;background:var(--green);}
+.foot-link{font-family:var(--mono);font-size:8px;color:var(--dim);text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;}.foot-link:hover{color:var(--gray);}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);padding:9px 18px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--white);font-size:12px;font-weight:400;z-index:200;opacity:0;transition:all .3s;pointer-events:none;display:flex;align-items:center;gap:6px;}
+.toast-d{width:4px;height:4px;border-radius:50%;background:var(--green);flex-shrink:0;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+@media(max-width:900px){
+  .stats-frame{flex-direction:column;gap:20px;}
+  .stat-block+.stat-block{border-left:none;border-top:1px solid var(--border);padding-top:20px;}
+  .showcase-grid{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:700px){
+  .nav{padding:16px 20px;}
+  .nav-logo{font-size:18px;}
+  .nav-right{font-size:8px;letter-spacing:1.5px;}
+  .hero{padding:36px 20px 24px;max-width:100%;}
+  .hero h1{font-size:28px;letter-spacing:-0.8px;line-height:1.15;}
+  .hero p{font-size:14px;line-height:1.65;}
+  .demo{padding:0 16px 32px;gap:40px;}
+  .phone{width:100%;max-width:340px;height:auto;aspect-ratio:370/700;border-radius:36px;padding:8px;}
+  .phone-island{width:70px;height:20px;border-radius:11px;top:12px;}
+  .phone-screen{border-radius:30px;}
+  .wa-hdr{padding:42px 10px 8px;}
+  .wa-av{width:28px;height:28px;font-size:11px;}
+  .wa-name{font-size:13px;}
+  .wa-stat{font-size:9px;}
+  .wa-msgs{padding:8px 8px;}
+  .wa-m{font-size:12px;padding:5px 8px 3px;max-width:88%;}
+  .wa-bar{padding:5px 8px;}
+  .wa-inp{font-size:12px;padding:8px 12px;border-radius:16px;}
+  .wa-send{width:30px;height:30px;}
+  .wa-send svg{width:12px;height:12px;}
+  .bc{padding:10px;}
+  .bc-title{font-size:11px;}
+  .bc-row{font-size:10px;}
+  .bc-code{font-size:9px;}
+  .bc-total{font-size:11px;}
+  .bc-btn{font-size:9px;padding:6px 10px;}
+  .presets{gap:8px;margin-top:8px;}
+  .preset-row{gap:6px;flex-wrap:wrap;}
+  .pill{padding:8px 14px;font-size:11px;border-radius:6px;}
+  .pill-emoji{font-size:13px;}
+  .stats-section{padding:24px 20px;}
+  .stats-frame{padding:24px 20px;}
+  .stat-val{font-size:28px;}
+  .stat-lbl{font-size:7px;letter-spacing:1.5px;}
+  .stat-desc{font-size:11px;margin-top:6px;}
+  .how{padding:24px 20px 32px;max-width:100%;}
+  .how h2{font-size:20px;margin-bottom:20px;}
+  .how-txt{font-size:12px;}
+  .showcase{padding:24px 20px 32px;}
+  .showcase h2{font-size:20px;}
+  .showcase-sub{font-size:13px;margin-bottom:24px;}
+  .showcase-grid{grid-template-columns:1fr;gap:10px;}
+  .sc-card{padding:16px;}
+  .sc-emoji{font-size:18px;margin-bottom:6px;}
+  .sc-title{font-size:12px;}
+  .sc-desc{font-size:11px;}
+  .foot{padding:16px 20px;}
+  .foot-logo{font-size:14px;}
+  .toast{font-size:11px;padding:8px 14px;bottom:16px;}
+}
+@media(max-width:380px){
+  .hero h1{font-size:24px;}
+  .hero p{font-size:13px;}
+  .phone{max-width:300px;}
+  .pill{padding:7px 12px;font-size:10px;}
+  .stat-val{font-size:24px;}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<nav class="nav">
+  <a href="https://roenai.com" class="nav-logo"><span class="nav-dot"></span>roen</a>
+  <span class="nav-right">Product Demo</span>
+</nav>
+
+<div class="hero">
+  <h1>Know your numbers before the meeting</h1>
+  <p>Walking into a client meeting and need the budget status? Ask roen. Real-time cost-to-complete, margin tracking, and variance analysis — from your phone, in seconds.</p>
+</div>
+
+<div class="demo">
+  <div class="phone">
+    <div class="phone-island"></div>
+    <div class="phone-screen">
+      <div class="wa-hdr">
+        <span class="wa-back">&lsaquo;</span>
+        <div class="wa-av">r</div>
+        <div class="wa-info">
+          <div class="wa-name">@budget</div>
+          <div class="wa-stat" id="hdrStat"><span class="wa-sd"></span>online</div>
+        </div>
+      </div>
+      <div class="wa-msgs" id="msgs">
+        <div class="wa-date">Today</div>
+        <div class="wa-m wa-m-in">Hey 👋 Check any project's budget status, log a cost, or ask about margin.<div class="wa-ts">now</div></div>
+      </div>
+      <div class="wa-bar">
+        <input class="wa-inp" id="inp" placeholder="Budget check or cost log..." onkeydown="if(event.key==='Enter')send()">
+        <button class="wa-send" onclick="send()"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+      </div>
+    </div>
+  </div>
+  <div class="presets">
+    <div class="preset-row">
+      <button class="pill" onclick="preset('budgetcheck')"><span class="pill-emoji">💰</span>Budget check</button>
+      <button class="pill" onclick="preset('voicecost')"><span class="pill-emoji">🎙️</span>Voice cost log</button>
+      <button class="pill" onclick="preset('marginalert')"><span class="pill-emoji">📊</span>Margin alert</button>
+    </div>
+    <div class="preset-row">
+      <button class="pill" onclick="preset('costoverrun')"><span class="pill-emoji">⚠️</span>Cost overrun</button>
+      <button class="pill" onclick="preset('costtocomplete')"><span class="pill-emoji">📋</span>Cost to complete</button>
+    </div>
+  </div>
+</div>
+
+<div class="stats-section">
+  <div class="stats-frame">
+    <div class="stat-block"><div class="stat-val">Real-time</div><div class="stat-lbl">Budget Visibility</div><div class="stat-desc">Every invoice, PO, and cost logged instantly. No waiting for monthly reconciliation.</div></div>
+    <div class="stat-block"><div class="stat-val">94%</div><div class="stat-lbl">Forecast Accuracy</div><div class="stat-desc">AI-predicted cost-to-complete within 6% of final project cost.</div></div>
+    <div class="stat-block"><div class="stat-val">2.1x</div><div class="stat-lbl">Margin Protection</div><div class="stat-desc">Early overrun detection saves an average of 2.1x the flagged amount.</div></div>
+  </div>
+</div>
+
+<div class="how">
+  <h2>How it works</h2>
+  <div class="how-steps">
+    <div class="how-step"><div class="how-num">01</div><div class="how-txt"><strong>Ask or log</strong> — check budget status or log a cost from site. Text or voice.</div></div>
+    <div class="how-step"><div class="how-num">02</div><div class="how-txt"><strong>AI reconciles</strong> — cross-references POs, invoices, committed costs, and actuals across all cost codes.</div></div>
+    <div class="how-step"><div class="how-num">03</div><div class="how-txt"><strong>Get the picture</strong> — real-time budget status with variance analysis and forecast.</div></div>
+    <div class="how-step"><div class="how-num">04</div><div class="how-txt"><strong>Act on it</strong> — flag overruns, adjust forecasts, or export for the client meeting.</div></div>
+  </div>
+</div>
+
+<div class="showcase">
+  <h2>What the agent can do</h2>
+  <p class="showcase-sub">@budget agent knows your projects, cost codes, POs, invoices, and committed costs.</p>
+  <div class="showcase-grid">
+    <div class="sc-card">
+      <div class="sc-emoji">💰</div>
+      <div class="sc-title">Real-time budget</div>
+      <div class="sc-desc">Ask for budget status on any project. Committed, spent, remaining, margin.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">📊</div>
+      <div class="sc-title">Variance analysis</div>
+      <div class="sc-desc">"Why is concrete over?" AI traces back to specific POs and invoices.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">🔔</div>
+      <div class="sc-title">Overrun alerts</div>
+      <div class="sc-desc">Proactive alerts when any cost code trends above budget. Catch it early.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">📋</div>
+      <div class="sc-title">Log costs from site</div>
+      <div class="sc-desc">Approve an invoice or log a cost with a text message. Auto-coded.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">📈</div>
+      <div class="sc-title">Margin tracking</div>
+      <div class="sc-desc">Real-time margin by project, by trade, by cost code. Target vs actual.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">🔮</div>
+      <div class="sc-title">Forecast to complete</div>
+      <div class="sc-desc">AI predicts final cost based on current burn rate and remaining scope.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">📄</div>
+      <div class="sc-title">Export reports</div>
+      <div class="sc-desc">Budget summary, variance report, or cost-to-complete as PDF or Excel.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">🏗️</div>
+      <div class="sc-title">Multi-project view</div>
+      <div class="sc-desc">"How are all my projects tracking?" Portfolio-level budget dashboard.</div>
+    </div>
+  </div>
+</div>
+
+<footer class="foot">
+  <a href="https://roenai.com" class="foot-logo"><span class="foot-d"></span>roen</a>
+  <a href="https://roenai.com" class="foot-link">roenai.com</a>
+</footer>
+
+</div>
+<div class="toast" id="toast"><span class="toast-d"></span><span id="toastTxt"></span></div>
+
+<script>
+const M=document.getElementById('msgs'),I=document.getElementById('inp'),S=document.getElementById('hdrStat');
+let busy=false,userOwns=false,aT=[],gen=0;
+
+function ts(){const n=new Date;return n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0');}
+function msg(t,d){const e=document.createElement('div');e.className='wa-m wa-m-'+d;if(d==='in')e.style.maxWidth='92%';e.innerHTML=t+'<div class="wa-ts">'+ts()+(d==='out'?' <span class="wa-ck">✓✓</span>':'')+'</div>';M.appendChild(e);M.scrollTop=M.scrollHeight;}
+
+let typ=null;
+function showT(){S.innerHTML='<span class="wa-sd"></span>typing...';typ=document.createElement('div');typ.className='typing';typ.innerHTML='<div class="td"></div><div class="td"></div><div class="td"></div>';M.appendChild(typ);M.scrollTop=M.scrollHeight;}
+function hideT(){S.innerHTML='<span class="wa-sd"></span>online';if(typ){typ.remove();typ=null;}}
+function toast(m){const t=document.getElementById('toast');document.getElementById('toastTxt').textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+let lastBudget=null;
+function renderBudget(d){
+  lastBudget=d;
+  const e=document.createElement('div');e.className='wa-m wa-m-in';e.style.maxWidth='92%';
+  const codes=d.codes.map(c=>{
+    let ind='green';if(c.stat==='amber')ind='amber';else if(c.stat==='red')ind='red';
+    return '<div class="bc-code"><span class="bc-code-name">'+c.name+'</span><span class="bc-code-stat"><span class="bc-indicator '+ind+'"></span>'+c.spent+'/'+c.budget+'</span></div>';
+  }).join('');
+  const marginStyle=d.marginPct<15?'red':d.marginPct<20?'amber':'green';
+  e.innerHTML="Budget snapshot 📊"+
+    '<div class="bc"><div class="bc-hdr"><span class="bc-title">'+d.project+'</span><span class="bc-id">'+d.id+'</span></div>'+
+    '<div class="bc-row"><span class="bc-row-l">Original budget</span><span class="bc-row-v">$'+d.original.toLocaleString()+'</span></div>'+
+    '<div class="bc-row"><span class="bc-row-l">Committed</span><span class="bc-row-v">$'+d.committed.toLocaleString()+'</span></div>'+
+    '<div class="bc-row"><span class="bc-row-l">Actual spent</span><span class="bc-row-v">$'+d.spent.toLocaleString()+'</span></div>'+
+    '<div class="bc-row"><span class="bc-row-l">Remaining</span><span class="bc-row-v" style="color:var(--green)">$'+d.remaining.toLocaleString()+'</span></div>'+
+    '<div class="bc-sep"></div>'+
+    '<div class="bc-row"><span class="bc-row-l">Margin</span><span class="bc-row-v" style="color:'+(marginStyle==='red'?'#FF3B30':marginStyle==='amber'?'#FFC107':'var(--green)')+'">'+d.marginPct+'% (target 28%)</span></div>'+
+    '<div class="bc-row"><span class="bc-row-l">Cost to complete</span><span class="bc-row-v">$'+d.forecast.toLocaleString()+'</span></div>'+
+    '<div class="bc-codes">'+codes+'</div>'+
+    '<div class="bc-btns"><button class="bc-btn bc-go" onclick="killAll();logCost(\''+d.id+'\')">✓ Log cost</button><button class="bc-btn bc-ed" onclick="killAll();exportReport()">Export report</button></div></div>'+
+    '<div class="wa-ts">'+ts()+'</div>';
+  M.appendChild(e);M.scrollTop=M.scrollHeight;
+}
+
+function logCost(id){
+  msg('Just approved an invoice','out');showT();
+  setTimeout(()=>{hideT();msg('What cost code? (Concrete, steel, plumbing, etc)','in');busy=false;},700);
+}
+function exportReport(){
+  msg('Need it as PDF or Excel?','out');showT();
+  setTimeout(()=>{hideT();msg('Generating budget report...','in');showT();
+    setTimeout(()=>{hideT();
+      const e=document.createElement('div');e.className='wa-m wa-m-in';e.style.maxWidth='92%';
+      const d=lastBudget;
+      e.innerHTML='Sent to email ✅<div style="background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.05);border-radius:8px;padding:12px;margin-top:6px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.05);"><div style="width:28px;height:34px;background:rgba(255,255,255,.06);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;">📄</div><div><div style="font-size:11px;font-weight:600;color:var(--wa-text);">'+d.project+' — Budget Report.pdf</div><div style="font-size:9px;color:var(--wa-muted);">3 pages • 2.4 MB</div></div></div><div style="font-size:10px;color:var(--wa-muted);line-height:1.5;"><div style="display:flex;justify-content:space-between;padding:1px 0;">Budget Summary</div><div style="display:flex;justify-content:space-between;padding:1px 0;">Variance Analysis</div><div style="display:flex;justify-content:space-between;padding:1px 0;">Cost Codes Detail</div><div style="display:flex;justify-content:space-between;font-weight:700;font-size:11px;color:var(--wa-text);padding-top:4px;margin-top:4px;border-top:1px solid rgba(255,255,255,.06);"><span>Exported</span><span>PDF</span></div></div><div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-between;align-items:center;"><span style="font-family:var(--mono);font-size:8px;color:var(--green);letter-spacing:.5px;">READY TO SHARE</span><span style="font-family:var(--logo);font-size:10px;color:var(--dim);">roen</span></div></div></div><div class="wa-ts">'+ts()+'</div>';
+      M.appendChild(e);M.scrollTop=M.scrollHeight;
+      setTimeout(()=>{msg('Sent to your email and ready to share with the client 👍','in');toast('Report exported and emailed');busy=false;},800);
+    },1200);
+  },700);
+}
+
+const scripts={
+  budgetcheck:[
+    {d:'out',t:"What's the budget status on the Henley project?"},
+    {d:'in',t:"Pulling real-time data across all cost codes... 🔍",delay:900},
+    {d:'budget',data:{project:"Henley Beachfront Reno",id:"P-4821",original:285000,committed:268000,spent:187400,remaining:97600,forecast:298200,marginPct:19,codes:[
+      {name:"Concrete",budget:"$48K",spent:"$52.3K",stat:"red"},
+      {name:"Steel",budget:"$35K",spent:"$34.8K",stat:"green"},
+      {name:"Electrical",budget:"$42K",spent:"$41.2K",stat:"green"},
+      {name:"Plumbing",budget:"$38K",spent:"$36.9K",stat:"green"},
+      {name:"Joinery",budget:"$52K",spent:"$43.2K",stat:"amber"}
+    ]}}
+  ],
+  voicecost:[
+    {d:'out',t:"Just approved the steel invoice, $14,200 from Consolidated"},
+    {d:'in',t:"Got it 🎙️ Steel, $14.2K from Consolidated. Which project?"},
+    {d:'out',t:"Henley project"},
+    {d:'in',t:"Logging to steel cost code on Henley Beachfront Reno... ✅",delay:600},
+    {d:'in',t:"Steel committed updated to $49.2K. Still tracking under budget. Remaining on project: $83.4K 📈"}
+  ],
+  marginalert:[
+    {d:'out',t:"Which projects have margin below 20%?"},
+    {d:'in',t:"Scanning all active projects... 🔍",delay:900},
+    {d:'in',t:"Three projects flagged:<br><br><strong>Henley Beachfront</strong> — 19% margin (concrete overrun, see variance)<br><strong>Collins St Extension</strong> — 18% margin (joinery scope creep)<br><strong>Mitchell Park Reno</strong> — 17% margin (labour burn ahead of schedule)"},
+    {d:'out',t:"What caused the Henley concrete overrun?"},
+    {d:'in',t:"Concrete: forecast was $48K based on 890m³ at market rates. Actual bills to date: $52.3K. That's 4 invoices from Concrete Supplies, last one was $18.5K for premium finish upgrade (change request signed Nov 12). Variance: +$4.3K 🔴",delay:600}
+  ],
+  costoverrun:[
+    {d:'out',t:"Concrete is 15% over budget on Collins St, what happened?"},
+    {d:'in',t:"Pulling variance data on Collins St concrete... 📊",delay:900},
+    {d:'budget',data:{project:"Collins St Commercial",id:"P-4803",original:520000,committed:498000,spent:342100,remaining:155900,forecast:532800,marginPct:18,codes:[
+      {name:"Concrete",budget:"$64K",spent:"$73.6K",stat:"red"},
+      {name:"Steel",budget:"$82K",spent:"$81.4K",stat:"green"},
+      {name:"Roof",budget:"$76K",spent:"$74.2K",stat:"green"},
+      {name:"Electrical",budget:"$89K",spent:"$86.1K",stat:"green"},
+      {name:"Plumbing",budget:"$71K",spent:"$69.8K",stat:"green"}
+    ]}}
+  ],
+  costtocomplete:[
+    {d:'out',t:"What's the cost to complete on the Mitchell Park reno?"},
+    {d:'in',t:"Running forecast on Mitchell Park... 🔮",delay:900},
+    {d:'budget',data:{project:"Mitchell Park Residential",id:"P-4798",original:195000,committed:182000,spent:128600,remaining:53400,forecast:201500,marginPct:17,codes:[
+      {name:"Framing",budget:"$35K",spent:"$31.2K",stat:"green"},
+      {name:"Roofing",budget:"$28K",spent:"$29.1K",stat:"amber"},
+      {name:"Windows",budget:"$22K",spent:"$21.8K",stat:"green"},
+      {name:"Interior",budget:"$48K",spent:"$34.5K",stat:"green"},
+      {name:"Finishing",budget:"$18K",spent:"$12K",stat:"green"}
+    ]}}
+  ]
+};
+
+function playScript(key,cb){
+  const steps=scripts[key];if(!steps)return;
+  let i=0;const g=gen;busy=true;
+  function next(){
+    if(gen!==g){busy=false;return;}
+    if(i>=steps.length){busy=false;if(cb)cb();return;}
+    const s=steps[i];i++;
+    if(s.d==='out'){
+      typeAndSend(s.t,g,()=>{if(gen===g)setTimeout(next,400);});
+    }else if(s.d==='in'){
+      showT();setTimeout(()=>{if(gen!==g){hideT();return;}hideT();msg(s.t,'in');setTimeout(next,s.delay||900);},700+Math.random()*500);
+    }else if(s.d==='budget'){
+      showT();setTimeout(()=>{if(gen!==g){hideT();return;}hideT();renderBudget(s.data);setTimeout(()=>{busy=false;if(gen===g&&cb)cb();},200);},1200);
+    }
+  }
+  next();
+}
+
+function killAll(){gen++;userOwns=true;aT.forEach(t=>clearTimeout(t));aT=[];busy=false;hideT();I.value='';chatState='idle';}
+
+function typeAndSend(text,g,cb){
+  I.value='';let ci=0;const spd=25+Math.random()*15;
+  function go(){
+    if(gen!==g){I.value='';return;}
+    if(ci<text.length){I.value+=text[ci];ci++;I.scrollLeft=I.scrollWidth;setTimeout(go,spd+(Math.random()>.85?120:0));}
+    else setTimeout(()=>{if(gen!==g){I.value='';return;}I.value='';msg(text,'out');if(cb)cb();},300);
+  }
+  go();
+}
+
+let chatState='idle';
+
+function send(){
+  killAll();
+  const t=I.value.trim();if(!t)return;I.value='';msg(t,'out');
+  busy=true;
+  const l=t.toLowerCase();
+
+  if(l.includes('budget')||l.includes('status')){
+    showT();setTimeout(()=>{hideT();msg('Which project? (Henley, Collins St, Mitchell Park, etc)','in');busy=false;},700);
+  }else if(l.includes('margin')||l.includes('below')||l.includes('low margin')){
+    showT();setTimeout(()=>{hideT();msg('Scanning all active projects... 🔍','in');showT();setTimeout(()=>{hideT();msg('Three projects flagged:<br><br><strong>Henley Beachfront</strong> — 19% margin<br><strong>Collins St Extension</strong> — 18% margin<br><strong>Mitchell Park Reno</strong> — 17% margin','in');busy=false;},1200);},700);
+  }else if(l.includes('cost to complete')||l.includes('forecast')){
+    showT();setTimeout(()=>{hideT();msg('Which project?','in');busy=false;},700);
+  }else if(l.includes('overrun')||l.includes('over budget')){
+    showT();setTimeout(()=>{hideT();msg('Which cost code or project?','in');busy=false;},700);
+  }else if(l.includes('log')||l.includes('cost')||l.includes('invoice')||l.includes('approved')){
+    showT();setTimeout(()=>{hideT();msg('Got it. What project and how much?','in');busy=false;},700);
+  }else{
+    showT();setTimeout(()=>{hideT();msg('You can ask me about budget status, margin, cost-to-complete, overruns, or log a cost. What do you need? 💰','in');busy=false;},700);
+  }
+}
+
+function preset(k){
+  killAll();
+  resetChat();
+  userOwns=true;
+  const g=++gen;
+  setTimeout(()=>{if(gen===g)playScript(k);},300);
+}
+
+I.addEventListener('focus',killAll);
+
+function resetChat(){M.innerHTML='<div class="wa-date">Today</div><div class="wa-m wa-m-in">Hey 👋 Check any project\'s budget status, log a cost, or ask about margin.<div class="wa-ts">now</div></div>';}
+
+const keys=['budgetcheck','marginalert','costtocomplete','costoverrun'];let li=0;
+function loop(){
+  if(userOwns)return;const g=gen;const k=keys[li%keys.length];li++;
+  playScript(k,()=>{if(gen!==g||userOwns)return;aT.push(setTimeout(()=>{if(gen!==g||userOwns)return;resetChat();aT.push(setTimeout(loop,600));},4000));});
+}
+aT.push(setTimeout(loop,1200));
+</script>
+</body>
+</html>

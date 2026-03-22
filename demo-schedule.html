@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>roen — Schedule Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+@font-face {
+  font-family:'Cooper BT';
+  src:url('https://db.onlinewebfonts.com/t/2a88cde81e30e1095a498e3aa7ae3a0d.woff2') format('woff2');
+  font-weight:600; font-style:normal; font-display:swap;
+}
+:root{
+  --black:#0A0A0A;--white:#FFFFFF;--green:#00C853;
+  --gray:#8A8A8A;--surface:#141414;--border:#2A2A2A;--dim:#4a4a4a;
+  --logo:'Cooper BT',Georgia,serif;
+  --heading:'Open Sans',system-ui,sans-serif;
+  --body:'Open Sans',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',monospace;
+  --wa-bg:#0b141a;--wa-panel:#1f2c34;--wa-out:#005c4b;
+  --wa-text:#e9edef;--wa-muted:#8696a0;--wa-teal:#00a884;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{-webkit-font-smoothing:antialiased;}
+body{font-family:var(--body);background:var(--black);color:var(--white);min-height:100vh;overflow-x:hidden;}
+
+/* Atmospheric bg glow — matching pitch deck */
+body::before{
+  content:'';position:fixed;top:0;left:0;right:0;bottom:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(0,200,83,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at var(--gx,50%) var(--gy,40%), rgba(20,80,70,0.35) 0%, transparent 65%);
+  animation:glowDrift 12s ease-in-out infinite alternate;
+}
+@keyframes glowDrift{
+  0%{--gx:40%;--gy:35%;}
+  25%{--gx:55%;--gy:45%;}
+  50%{--gx:60%;--gy:30%;}
+  75%{--gx:45%;--gy:50%;}
+  100%{--gx:50%;--gy:35%;}
+}
+@property --gx{syntax:'<percentage>';inherits:false;initial-value:50%;}
+@property --gy{syntax:'<percentage>';inherits:false;initial-value:40%;}
+
+.page{position:relative;z-index:1;}
+
+/* Nav */
+.nav{padding:24px 48px;display:flex;justify-content:space-between;align-items:center;}
+.nav-logo{font-family:var(--logo);font-size:20px;font-weight:600;color:var(--white);text-decoration:none;display:flex;align-items:center;gap:7px;}
+.nav-dot{width:5px;height:5px;border-radius:50%;background:var(--green);}
+.nav-right{font-family:var(--mono);font-size:9px;font-weight:400;color:var(--dim);text-transform:uppercase;letter-spacing:2px;}
+
+/* Hero */
+.hero{text-align:center;padding:64px 48px 40px;max-width:720px;margin:0 auto;}
+.hero h1{
+  font-family:var(--heading);font-size:clamp(38px,5.5vw,60px);
+  font-weight:600;line-height:1.1;letter-spacing:-0.5px;margin-bottom:20px;
+}
+.hero p{font-size:15px;font-weight:300;color:var(--gray);line-height:1.75;max-width:500px;margin:0 auto;}
+
+/* Bordered card frame — pitch deck style */
+.frame{
+  max-width:1000px;margin:0 auto;
+  border:1px solid var(--border);border-radius:12px;
+  padding:48px;
+  background:var(--surface);
+}
+
+/* Demo layout */
+.demo{max-width:1080px;margin:0 auto;padding:0 48px 48px;display:flex;flex-direction:column;align-items:center;gap:36px;}
+
+/* Phone */
+.phone{width:370px;max-width:100%;height:700px;background:#000;border-radius:46px;padding:9px;position:relative;box-shadow:0 0 0 1px rgba(255,255,255,.04),0 50px 100px -20px rgba(0,0,0,.6);}
+.phone-island{width:86px;height:24px;background:#1a1a1a;border-radius:13px;position:absolute;top:15px;left:50%;transform:translateX(-50%);z-index:11;}
+.phone-screen{width:100%;height:100%;background:var(--wa-bg);border-radius:38px;overflow:hidden;display:flex;flex-direction:column;}
+
+/* WA chrome */
+.wa-hdr{background:var(--wa-panel);padding:50px 12px 9px;display:flex;align-items:center;gap:9px;}
+.wa-back{color:var(--wa-teal);font-size:17px;font-weight:300;}
+.wa-av{width:32px;height:32px;border-radius:50%;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-family:var(--logo);font-size:13px;font-weight:600;color:var(--white);}
+.wa-info{flex:1;}
+.wa-name{font-size:14px;font-weight:500;color:var(--wa-text);}
+.wa-stat{font-size:10px;color:var(--wa-teal);display:flex;align-items:center;gap:3px;}
+.wa-sd{width:3px;height:3px;border-radius:50%;background:var(--green);}
+
+.wa-msgs{flex:1;overflow-y:auto;padding:10px 9px;display:flex;flex-direction:column;gap:2px;scrollbar-width:none;}
+.wa-msgs::-webkit-scrollbar{display:none;}
+.wa-date{align-self:center;padding:3px 9px;border-radius:5px;background:rgba(255,255,255,.03);font-size:9.5px;color:var(--wa-muted);font-weight:500;margin:4px 0;}
+.wa-m{max-width:86%;padding:6px 9px 3px;border-radius:7px;font-size:12.5px;line-height:1.5;animation:mIn .3s cubic-bezier(.16,1,.3,1);}
+@keyframes mIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+.wa-m-out{align-self:flex-end;background:var(--wa-out);color:var(--wa-text);border-bottom-right-radius:2px;}
+.wa-m-in{align-self:flex-start;background:var(--wa-panel);color:var(--wa-text);border-bottom-left-radius:2px;}
+.wa-ts{font-size:8.5px;color:rgba(255,255,255,.18);text-align:right;margin-top:1px;}
+.wa-ck{color:rgba(83,176,220,.5);}
+.typing{display:flex;gap:3px;padding:9px 12px;align-self:flex-start;background:var(--wa-panel);border-radius:7px;border-bottom-left-radius:2px;}
+.td{width:4px;height:4px;background:var(--wa-muted);border-radius:50%;animation:tB 1.4s infinite;}
+.td:nth-child(2){animation-delay:.15s;}.td:nth-child(3){animation-delay:.3s;}
+@keyframes tB{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-3px);}}
+
+/* Schedule card */
+.sc{background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.05);border-radius:8px;padding:10px;margin-top:4px;}
+.sc-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid rgba(255,255,255,.05);}
+.sc-title{font-weight:600;font-size:11.5px;color:var(--wa-text);}
+.sc-proj{font-family:var(--mono);font-size:8px;color:var(--wa-teal);font-weight:400;letter-spacing:.5px;}
+.sc-row{display:flex;justify-content:space-between;padding:1.5px 0;font-size:10.5px;}
+.sc-row-l{color:var(--wa-muted);}.sc-row-v{font-weight:600;color:var(--wa-text);font-variant-numeric:tabular-nums;}
+.sc-sep{height:1px;background:rgba(255,255,255,.05);margin:4px 0;}
+.sc-impact{display:flex;justify-content:space-between;padding-top:5px;margin-top:3px;border-top:1px solid rgba(255,255,255,.07);font-weight:700;font-size:11px;color:var(--green);}
+.sc-impact span:last-child{color:var(--green);}
+.sc-meta{display:flex;gap:12px;margin-top:5px;font-size:8px;color:var(--wa-muted);font-family:var(--mono);letter-spacing:.3px;}
+.sc-btns{display:flex;gap:4px;margin-top:7px;}
+.sc-btn{padding:6px 11px;border-radius:6px;font-size:9.5px;font-weight:600;cursor:pointer;border:none;font-family:var(--body);transition:all .2s;}
+.sc-go{background:var(--green);color:var(--black);}.sc-go:hover{filter:brightness(1.1);}
+.sc-ed{background:rgba(255,255,255,.08);color:var(--wa-text);}.sc-ed:hover{background:rgba(255,255,255,.12);}
+
+/* Input */
+.wa-bar{padding:6px 9px;background:var(--wa-panel);display:flex;gap:6px;align-items:center;}
+.wa-inp{flex:1;padding:8px 13px;border-radius:18px;border:none;background:#2a3942;color:var(--wa-text);font-size:13px;font-family:var(--body);outline:none;}
+.wa-inp:focus{background:#2f4050;}
+.wa-inp::placeholder{color:var(--wa-muted);}
+.wa-send{width:32px;height:32px;border-radius:50%;background:var(--wa-teal);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .15s;flex-shrink:0;}
+.wa-send:hover{transform:scale(1.06);}
+.wa-send svg{fill:#fff;width:13px;height:13px;}
+
+/* Presets — 5 pills layout */
+.presets{display:flex;flex-direction:column;align-items:center;gap:8px;}
+.preset-row{display:flex;gap:8px;justify-content:center;}
+.pill{
+  padding:10px 20px;border-radius:8px;
+  background:transparent;border:1px solid rgba(255,255,255,.35);
+  font-size:13px;font-weight:400;color:#ddd;
+  cursor:pointer;font-family:var(--body);transition:all .25s;
+  display:flex;align-items:center;gap:6px;
+}
+.pill:hover{border-color:rgba(255,255,255,.7);color:var(--white);background:rgba(255,255,255,.05);}
+.pill-emoji{font-size:15px;}
+
+/* Stats — matching pitch deck layout */
+.stats-section{max-width:1000px;margin:0 auto;padding:40px 48px;}
+.stats-frame{
+  border:1px solid var(--border);border-radius:12px;
+  padding:40px 48px;background:var(--surface);
+  display:flex;gap:0;
+}
+.stat-block{flex:1;text-align:center;}
+.stat-block+.stat-block{border-left:1px solid var(--border);}
+.stat-val{font-family:var(--heading);font-size:36px;font-weight:600;color:var(--white);letter-spacing:-.5px;}
+.stat-lbl{font-family:var(--mono);font-size:8px;font-weight:400;color:var(--dim);text-transform:uppercase;letter-spacing:2px;margin-top:6px;}
+.stat-desc{font-size:12px;font-weight:300;color:var(--gray);line-height:1.5;margin-top:8px;max-width:200px;margin-left:auto;margin-right:auto;}
+
+/* How */
+.how{max-width:680px;margin:0 auto;padding:40px 48px 48px;text-align:center;}
+.how h2{font-family:var(--heading);font-size:24px;font-weight:600;color:var(--white);margin-bottom:24px;}
+.how-steps{display:flex;flex-direction:column;gap:12px;text-align:left;}
+.how-step{display:flex;gap:12px;align-items:flex-start;}
+.how-num{font-family:var(--mono);font-size:9px;font-weight:400;color:var(--dim);width:18px;flex-shrink:0;padding-top:3px;}
+.how-txt{font-size:13px;font-weight:300;color:var(--gray);line-height:1.6;}
+.how-txt strong{font-weight:600;color:var(--white);}
+
+/* Showcase */
+.showcase{max-width:800px;margin:0 auto;padding:40px 48px 48px;}
+.showcase h2{font-family:var(--heading);font-size:22px;font-weight:600;color:var(--white);text-align:center;margin-bottom:8px;}
+.showcase-sub{font-size:14px;font-weight:300;color:var(--gray);text-align:center;margin-bottom:32px;line-height:1.6;}
+.showcase-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.sh-card{padding:20px;border:1px solid var(--border);border-radius:10px;background:var(--surface);transition:border-color .2s;display:flex;flex-direction:column;min-height:120px;}
+.sh-card:hover{border-color:rgba(255,255,255,.12);}
+.sh-emoji{font-size:20px;margin-bottom:10px;}
+.sh-title{font-family:var(--heading);font-size:13px;font-weight:600;color:var(--white);margin-bottom:4px;}
+.sh-desc{font-size:12px;font-weight:300;color:var(--gray);line-height:1.5;}
+@media(max-width:600px){.showcase-grid{grid-template-columns:1fr;}.showcase{padding:28px 24px 36px;}}
+
+/* Footer */
+.foot{padding:24px 48px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.foot-logo{font-family:var(--logo);font-size:15px;font-weight:600;color:var(--dim);text-decoration:none;display:flex;align-items:center;gap:5px;}
+.foot-d{width:3px;height:3px;border-radius:50%;background:var(--green);}
+.foot-link{font-family:var(--mono);font-size:8px;color:var(--dim);text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;}.foot-link:hover{color:var(--gray);}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);padding:9px 18px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--white);font-size:12px;font-weight:400;z-index:200;opacity:0;transition:all .3s;pointer-events:none;display:flex;align-items:center;gap:6px;}
+.toast-d{width:4px;height:4px;border-radius:50%;background:var(--green);flex-shrink:0;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+@media(max-width:900px){
+  .stats-frame{flex-direction:column;gap:20px;}
+  .stat-block+.stat-block{border-left:none;border-top:1px solid var(--border);padding-top:20px;}
+  .showcase-grid{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:700px){
+  .nav{padding:16px 20px;}
+  .nav-logo{font-size:18px;}
+  .nav-right{font-size:8px;letter-spacing:1.5px;}
+  .hero{padding:36px 20px 24px;max-width:100%;}
+  .hero h1{font-size:28px;letter-spacing:-0.8px;line-height:1.15;}
+  .hero p{font-size:14px;line-height:1.65;}
+  .demo{padding:0 16px 32px;gap:40px;}
+  .phone{width:100%;max-width:340px;height:auto;aspect-ratio:370/700;border-radius:36px;padding:8px;}
+  .phone-island{width:70px;height:20px;border-radius:11px;top:12px;}
+  .phone-screen{border-radius:30px;}
+  .wa-hdr{padding:42px 10px 8px;}
+  .wa-av{width:28px;height:28px;font-size:11px;}
+  .wa-name{font-size:13px;}
+  .wa-stat{font-size:9px;}
+  .wa-msgs{padding:8px 8px;}
+  .wa-m{font-size:12px;padding:5px 8px 3px;max-width:88%;}
+  .wa-bar{padding:5px 8px;}
+  .wa-inp{font-size:12px;padding:8px 12px;border-radius:16px;}
+  .wa-send{width:30px;height:30px;}
+  .wa-send svg{width:12px;height:12px;}
+  .sc{padding:10px;}
+  .sc-title{font-size:11px;}
+  .sc-row{font-size:10px;}
+  .sc-impact{font-size:10px;}
+  .sc-btn{font-size:9px;padding:6px 10px;}
+  .presets{gap:8px;margin-top:8px;}
+  .preset-row{gap:6px;flex-wrap:wrap;}
+  .pill{padding:8px 14px;font-size:11px;border-radius:6px;}
+  .pill-emoji{font-size:13px;}
+  .stats-section{padding:24px 20px;}
+  .stats-frame{padding:24px 20px;}
+  .stat-val{font-size:28px;}
+  .stat-lbl{font-size:7px;letter-spacing:1.5px;}
+  .stat-desc{font-size:11px;margin-top:6px;}
+  .how{padding:24px 20px 32px;max-width:100%;}
+  .how h2{font-size:20px;margin-bottom:20px;}
+  .how-txt{font-size:12px;}
+  .showcase{padding:24px 20px 32px;}
+  .showcase h2{font-size:20px;}
+  .showcase-sub{font-size:13px;margin-bottom:24px;}
+  .showcase-grid{grid-template-columns:1fr;gap:10px;}
+  .sh-card{padding:16px;}
+  .sh-emoji{font-size:18px;margin-bottom:6px;}
+  .sh-title{font-size:12px;}
+  .sh-desc{font-size:11px;}
+  .foot{padding:16px 20px;}
+  .foot-logo{font-size:14px;}
+  .toast{font-size:11px;padding:8px 14px;bottom:16px;}
+}
+@media(max-width:380px){
+  .hero h1{font-size:24px;}
+  .hero p{font-size:13px;}
+  .phone{max-width:300px;}
+  .pill{padding:7px 12px;font-size:10px;}
+  .stat-val{font-size:24px;}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<nav class="nav">
+  <a href="https://roenai.com" class="nav-logo"><span class="nav-dot"></span>roen</a>
+  <span class="nav-right">Product Demo</span>
+</nav>
+
+<div class="hero">
+  <h1>Your schedule, always up to date</h1>
+  <p>Rain delay yesterday. Concrete pushed to Thursday. What's the knock-on? Ask roen. It recalculates the critical path, notifies affected trades, and updates the lookahead — while you're still on site.</p>
+</div>
+
+<div class="demo">
+  <div class="phone">
+    <div class="phone-island"></div>
+    <div class="phone-screen">
+      <div class="wa-hdr">
+        <span class="wa-back">&lsaquo;</span>
+        <div class="wa-av">r</div>
+        <div class="wa-info">
+          <div class="wa-name">roen</div>
+          <div class="wa-stat" id="hdrStat"><span class="wa-sd"></span>online</div>
+        </div>
+      </div>
+      <div class="wa-msgs" id="msgs">
+        <div class="wa-date">Today</div>
+        <div class="wa-m wa-m-in">Hey 👋 Tell me about a schedule change and I'll show you the impact.<div class="wa-ts">now</div></div>
+      </div>
+      <div class="wa-bar">
+        <input class="wa-inp" id="inp" placeholder="Report a delay or update..." onkeydown="if(event.key==='Enter')send()">
+        <button class="wa-send" onclick="send()"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+      </div>
+    </div>
+  </div>
+  <div class="presets">
+    <div class="preset-row">
+      <button class="pill" onclick="preset('weather')"><span class="pill-emoji">🌧️</span>Weather delay</button>
+      <button class="pill" onclick="preset('voice')"><span class="pill-emoji">🎙️</span>Voice update</button>
+      <button class="pill" onclick="preset('lookahead')"><span class="pill-emoji">📅</span>Lookahead</button>
+    </div>
+    <div class="preset-row">
+      <button class="pill" onclick="preset('clash')"><span class="pill-emoji">⚡</span>Trade clash</button>
+      <button class="pill" onclick="preset('critical')"><span class="pill-emoji">🏗️</span>Critical path</button>
+    </div>
+  </div>
+</div>
+
+<div class="stats-section">
+  <div class="stats-frame">
+    <div class="stat-block"><div class="stat-val">Real-time</div><div class="stat-lbl">Schedule Sync</div><div class="stat-desc">Every update from site flows into the master schedule automatically. No manual entry.</div></div>
+    <div class="stat-block"><div class="stat-val">3.1x</div><div class="stat-lbl">Fewer Delays</div><div class="stat-desc">Proactive conflict detection catches scheduling issues before they hit the critical path.</div></div>
+    <div class="stat-block"><div class="stat-val">92%</div><div class="stat-lbl">On-Time Trades</div><div class="stat-desc">Trade coordination through roen vs 67% industry average for manual scheduling.</div></div>
+  </div>
+</div>
+
+<div class="how">
+  <h2>How it works</h2>
+  <div class="how-steps">
+    <div class="how-step"><div class="how-num">01</div><div class="how-txt"><strong>Report from site</strong> — text or voice. "Concrete done", "rain delay", "framing ahead of schedule."</div></div>
+    <div class="how-step"><div class="how-num">02</div><div class="how-txt"><strong>AI updates the schedule</strong> — recalculates critical path, identifies downstream impacts, flags conflicts.</div></div>
+    <div class="how-step"><div class="how-num">03</div><div class="how-txt"><strong>Review the impact</strong> — see what moved, what's affected, and updated completion date.</div></div>
+    <div class="how-step"><div class="how-num">04</div><div class="how-txt"><strong>Notify and adjust</strong> — one tap to notify affected trades and update the master schedule.</div></div>
+  </div>
+</div>
+
+<div class="showcase">
+  <h2>What @schedule agent can do</h2>
+  <p class="showcase-sub">Track project progress, manage delays, coordinate trades — all via WhatsApp.</p>
+  <div class="showcase-grid">
+    <div class="sh-card">
+      <div class="sh-emoji">📅</div>
+      <div class="sh-title">3-week lookahead</div>
+      <div class="sh-desc">Auto-generated lookahead report. Trades, dates, dependencies, all current.</div>
+    </div>
+    <div class="sh-card">
+      <div class="sh-emoji">🌧️</div>
+      <div class="sh-title">Delay impact</div>
+      <div class="sh-desc">Report a delay and see the full downstream effect on critical path instantly.</div>
+    </div>
+    <div class="sh-card">
+      <div class="sh-emoji">⚡</div>
+      <div class="sh-title">Conflict detection</div>
+      <div class="sh-desc">Two trades scheduled same area same day? Flagged before it happens.</div>
+    </div>
+    <div class="sh-card">
+      <div class="sh-emoji">📊</div>
+      <div class="sh-title">Progress tracking</div>
+      <div class="sh-desc">"How far through are we?" Percentage complete by trade, by level, by area.</div>
+    </div>
+    <div class="sh-card">
+      <div class="sh-emoji">🔔</div>
+      <div class="sh-title">Trade notifications</div>
+      <div class="sh-desc">One tap to notify all affected subs when schedule changes.</div>
+    </div>
+    <div class="sh-card">
+      <div class="sh-emoji">📈</div>
+      <div class="sh-title">Trend analysis</div>
+      <div class="sh-desc">"Are we trending ahead or behind?" Historical pace vs planned pace.</div>
+    </div>
+    <div class="sh-card">
+      <div class="sh-emoji">🏗️</div>
+      <div class="sh-title">Resource leveling</div>
+      <div class="sh-desc">Too many trades stacked on one week? AI suggests optimal redistribution.</div>
+    </div>
+    <div class="sh-card">
+      <div class="sh-emoji">📄</div>
+      <div class="sh-title">Export reports</div>
+      <div class="sh-desc">Gantt, lookahead, or progress report as PDF for client meetings.</div>
+    </div>
+  </div>
+</div>
+
+<footer class="foot">
+  <a href="https://roenai.com" class="foot-logo"><span class="foot-d"></span>roen</a>
+  <a href="https://roenai.com" class="foot-link">roenai.com</a>
+</footer>
+
+</div>
+<div class="toast" id="toast"><span class="toast-d"></span><span id="toastTxt"></span></div>
+
+<script>
+const M=document.getElementById('msgs'),I=document.getElementById('inp'),S=document.getElementById('hdrStat');
+let busy=false,userOwns=false,aT=[],gen=0;
+
+function ts(){const n=new Date;return n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0');}
+function msg(t,d){const e=document.createElement('div');e.className='wa-m wa-m-'+d;if(d==='in')e.style.maxWidth='92%';e.innerHTML=t+'<div class="wa-ts">'+ts()+(d==='out'?' <span class="wa-ck">✓✓</span>':'')+'</div>';M.appendChild(e);M.scrollTop=M.scrollHeight;}
+
+let typ=null;
+function showT(){S.innerHTML='<span class="wa-sd"></span>typing...';typ=document.createElement('div');typ.className='typing';typ.innerHTML='<div class="td"></div><div class="td"></div><div class="td"></div>';M.appendChild(typ);M.scrollTop=M.scrollHeight;}
+function hideT(){S.innerHTML='<span class="wa-sd"></span>online';if(typ){typ.remove();typ=null;}}
+function toast(m){const t=document.getElementById('toast');document.getElementById('toastTxt').textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+let lastSchedule=null;
+function renderSchedule(d){
+  lastSchedule=d;
+  const e=document.createElement('div');e.className='wa-m wa-m-in';e.style.maxWidth='92%';
+  const critical=d.critical;
+  const affectedTrades=d.trades.slice(0,3).map(t=>t.name).join(', ')+(d.trades.length>3?', +'+( d.trades.length-3)+' more':'');
+  e.innerHTML="Here's the impact 📊"+
+    '<div class="sc"><div class="sc-hdr"><span class="sc-title">'+d.task+'</span><span class="sc-proj">'+d.project+'</span></div>'+
+    '<div class="sc-row"><span class="sc-row-l">Original Date</span><span class="sc-row-v">'+d.originalDate+'</span></div>'+
+    '<div class="sc-row"><span class="sc-row-l">Updated Date</span><span class="sc-row-v">'+d.updatedDate+'</span></div>'+
+    '<div class="sc-row"><span class="sc-row-l">On Critical Path</span><span class="sc-row-v">'+(critical?'Yes':'No')+'</span></div>'+
+    '<div class="sc-sep"></div>'+
+    '<div class="sc-row"><span class="sc-row-l">Days Impacted</span><span class="sc-row-v">'+d.daysImpact+'</span></div>'+
+    '<div class="sc-row"><span class="sc-row-l">Affected Trades</span><span class="sc-row-v">'+d.trades.length+'</span></div>'+
+    '<div class="sc-impact"><span>Completion pushed:</span><span>'+d.completionImpact+'</span></div>'+
+    '<div class="sc-meta"><span>🎯 '+d.trades.slice(0,3).map(t=>t.name).join(', ')+' '+(d.trades.length>3?'+ '+( d.trades.length-3):'')+'</span></div>'+
+    '<div class="sc-btns"><button class="sc-btn sc-go" onclick="killAll();acceptS(\''+d.project+'\')">✓ Update schedule</button><button class="sc-btn sc-ed" onclick="killAll();notifyTrades()">Notify trades</button></div></div>'+
+    '<div class="wa-ts">'+ts()+'</div>';
+  M.appendChild(e);M.scrollTop=M.scrollHeight;
+}
+
+function acceptS(proj){
+  msg('Schedule updated ✅','out');showT();
+  setTimeout(()=>{hideT();msg('Notifying '+lastSchedule.trades.length+' affected trades...','in');showT();
+    setTimeout(()=>{hideT();
+      const e=document.createElement('div');e.className='wa-m wa-m-in';e.style.maxWidth='92%';
+      e.innerHTML='Sent 🔔<br><strong>Notifications sent to:</strong><br>• Concrete team — new date Thu<br>• Framing crew — start Friday<br>• Plumbing — delayed 2 days<br>• Electrical — on watch<br><br>All trades synced. Lookahead updated.<div class="wa-ts">'+ts()+'</div>';
+      M.appendChild(e);M.scrollTop=M.scrollHeight;
+      setTimeout(()=>{msg('Master schedule updated. Gantt refreshed. 3-week lookahead recalculated 📋','in');toast('Schedule updated — '+lastSchedule.trades.length+' trades notified');},800);
+    },1200);
+  },700);
+}
+function notifyTrades(){msg('Send notifications now?','out');showT();setTimeout(()=>{hideT();msg('Notifying affected trades...','in');showT();setTimeout(()=>{hideT();msg('Sent notifications to '+lastSchedule.trades.length+' trades. All synced ✅','in');busy=false;},700);},700);}
+
+const scripts={
+  weather:[
+    {d:'out',t:"Rain delay yesterday. Concrete pushed to Thursday"},
+    {d:'in',t:"Got it 🌧️ Concrete rescheduled Thu. Checking impacts..."},
+    {d:'in',t:"Rain delay cascades forward 2 days. Framing now Fri-Mon. Plumbing pushes back. Critical path impact: +2 days overall.",delay:900},
+    {d:'schedule',data:{task:"Concrete — Level 1 slab",project:"Henley St",originalDate:"Wed 12 Mar",updatedDate:"Thu 13 Mar",critical:true,daysImpact:2,completionImpact:"+2 days",trades:[{name:"Framing"},{name:"Plumbing"},{name:"Electrical"},{name:"Landscaping"},{name:"Final finishes"}]}}
+  ],
+  voice:[
+    {d:'voice',dur:8,transcript:"Framing finished level 3 today, we're a day ahead of schedule. Plumber can move up if needed"},
+    {d:'in',t:"Framing level 3 done — ahead by 1 day 🎙️ That pulls plumbing back a day too"},
+    {d:'in',t:"Checking dependencies... Plumbing can start Wed instead of Thu. Electrical follows day after. Project completion moves up 1 day.",delay:900},
+    {d:'schedule',data:{task:"Framing — Level 3",project:"Henley St",originalDate:"Wed 12 Mar",updatedDate:"Tue 11 Mar",critical:true,daysImpact:-1,completionImpact:"-1 day (ahead)",trades:[{name:"Plumbing"},{name:"Electrical"},{name:"Finishes"}]}}
+  ],
+  lookahead:[
+    {d:'out',t:"Give me the 3-week lookahead for Henley"},
+    {d:'in',t:"Pulling live schedule... 📅"},
+    {d:'in',t:"<strong>Henley St — 3-week lookahead</strong><br><br><strong>This week:</strong> Framing L1-L2, Concrete cure<br><strong>Next week:</strong> Plumbing & electrical rough-in<br><strong>Week 3:</strong> Linings, flooring start<br><br>Critical path: Framing → Plumbing → Electrical → Finishes. On track."},
+    {d:'out',t:"Any risks?"},
+    {d:'in',t:"Concrete still curing — weather dependent. Plumber has 4-day buffer if rain delays cure. Electrical can flex 2 days. 📊",delay:600},
+  ],
+  clash:[
+    {d:'out',t:"Electrician and plumber both scheduled for level 2 Monday"},
+    {d:'in',t:"Conflict detected ⚡ Both need Level 2 access Mon. Checking crew availability..."},
+    {d:'in',t:"Plumber can start Tue instead — only 1-day impact to schedule. Electrician stays Mon. Want me to replan?"},
+    {d:'out',t:"Yeah, move plumber to Tuesday"},
+    {d:'in',t:"Updated 👍 Plumber now Tue-Thu L2. Electrical Mon-Tue L1-L2. Master schedule refreshed. No critical path impact.",delay:600},
+  ],
+  critical:[
+    {d:'out',t:"What's on the critical path this week?"},
+    {d:'in',t:"Critical path this week: Concrete cure → Framing L1 start 🏗️"},
+    {d:'in',t:"Concrete finish: Thu. Framing needs 5-day cure minimum. Zero buffer — any delay cascades to project end date. Weather watch active."},
+    {d:'out',t:"How much buffer on plumbing?"},
+    {d:'in',t:"Plumbing has 4-day buffer. Can start Wed-Fri either week without impact. Electrical has 2-day flex. Finishes only 1-day buffer 📊",delay:600},
+  ]
+};
+
+function typeAndSend(text,g,cb){
+  I.value='';let ci=0;const spd=25+Math.random()*15;
+  function go(){
+    if(gen!==g){I.value='';return;}
+    if(ci<text.length){I.value+=text[ci];ci++;I.scrollLeft=I.scrollWidth;setTimeout(go,spd+(Math.random()>.85?120:0));}
+    else setTimeout(()=>{if(gen!==g){I.value='';return;}I.value='';msg(text,'out');if(cb)cb();},300);
+  }
+  go();
+}
+
+function playScript(key,cb){
+  const steps=scripts[key];if(!steps)return;
+  let i=0;const g=gen;busy=true;
+  function next(){
+    if(gen!==g){busy=false;return;}
+    if(i>=steps.length){busy=false;if(cb)cb();return;}
+    const s=steps[i];i++;
+    if(s.d==='out'){
+      typeAndSend(s.t,g,()=>{if(gen===g)setTimeout(next,400);});
+    }else if(s.d==='in'){
+      showT();setTimeout(()=>{if(gen!==g){hideT();return;}hideT();msg(s.t,'in');setTimeout(next,s.delay||900);},700+Math.random()*500);
+    }else if(s.d==='schedule'){
+      showT();setTimeout(()=>{if(gen!==g){hideT();return;}hideT();renderSchedule(s.data);setTimeout(()=>{busy=false;if(gen===g&&cb)cb();},200);},1200);
+    }else if(s.d==='voice'){
+      const bars=Array.from({length:32},()=>4+Math.floor(Math.random()*16));
+      const e=document.createElement('div');e.className='wa-m wa-m-out';
+      e.innerHTML='<div style="display:flex;align-items:center;gap:8px;padding:4px 0;"><div style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" style="width:10px;height:10px;fill:var(--wa-text);"><path d="M8 5v14l11-7z"/></svg></div><div style="flex:1;height:24px;display:flex;align-items:center;gap:1.5px;">'+bars.map(h=>'<div style="width:2.5px;height:'+h+'px;border-radius:2px;background:rgba(255,255,255,.25);"></div>').join('')+'</div><div style="font-size:9px;color:var(--wa-muted);flex-shrink:0;width:28px;text-align:right;">0:'+s.dur+'</div></div><div style="margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.05);font-size:11px;color:var(--wa-muted);font-style:italic;">🎙️ <strong style="font-style:normal;color:var(--wa-text);font-weight:500;">'+s.transcript+'</strong></div><div class="wa-ts">'+ts()+' <span class="wa-ck">✓✓</span></div>';
+      M.appendChild(e);M.scrollTop=M.scrollHeight;
+      setTimeout(()=>{if(gen===g)setTimeout(next,400);},s.dur*1000+400);
+    }
+  }
+  next();
+}
+
+function killAll(){gen++;userOwns=true;aT.forEach(t=>clearTimeout(t));aT=[];busy=false;hideT();I.value='';chatState='idle';}
+
+const categories={
+  schedule:{kw:['delay','schedule','push','delay','concrete','framing','plumb','electric','trade','timeline','when','ready'],ask:"What schedule change? And which task — concrete, framing, plumbing? 📅"},
+  progress:{kw:['done','finished','complete','progress','how far','ahead','behind','pacing'],ask:"Which task is done or progressing? Which level or area? 🏗️"},
+  conflict:{kw:['clash','conflict','clash','same day','same time','too many','overlap'],ask:"Which trades clash? What day and level? ⚡"},
+  lookahead:{kw:['lookahead','next week','upcoming','forecast','coming up'],ask:"Which project? And how many weeks ahead? 📋"},
+  critical:{kw:['critical','critical path','risk','impact','cascade','what if'],ask:"What task are you asking about? And what area or level? 🎯"},
+  general:{kw:[],ask:"Tell me about the schedule — a delay, completion, or trade question. 📅"}
+};
+
+function detectCat(t){const l=t.toLowerCase();for(const[c,v]of Object.entries(categories)){if(c==='general')continue;if(v.kw.some(k=>l.includes(k)))return c;}return'general';}
+
+function genSchedule(cat,text){
+  const l=text.toLowerCase(),id='SCH-'+Math.floor(1000+Math.random()*9000);
+  const projects={
+    delay:{task:"Concrete — Level 1 slab",project:"Henley St",originalDate:"Wed 12 Mar",updatedDate:"Thu 13 Mar",critical:true,daysImpact:2,completionImpact:"+2 days",trades:[{name:"Framing"},{name:"Plumbing"},{name:"Electrical"}]},
+    progress:{task:"Framing — Level 2",project:"Henley St",originalDate:"Fri 14 Mar",updatedDate:"Thu 13 Mar",critical:true,daysImpact:-1,completionImpact:"-1 day (ahead)",trades:[{name:"Plumbing"},{name:"Electrical"},{name:"Finishes"}]},
+    conflict:{task:"Plumbing rough-in L2",project:"Henley St",originalDate:"Mon 18 Mar",updatedDate:"Tue 19 Mar",critical:false,daysImpact:1,completionImpact:"No impact",trades:[{name:"Electrical"}]},
+    general:{task:"Task update",project:"Project",originalDate:"TBD",updatedDate:"TBD",critical:false,daysImpact:0,completionImpact:"Checking...",trades:[{name:"Trade 1"},{name:"Trade 2"}]}
+  };
+  return projects[cat]||projects.general;
+}
+
+let chatState='idle',chatCat='schedule';
+
+function send(){
+  killAll();
+  const t=I.value.trim();if(!t)return;I.value='';msg(t,'out');
+  const l=t.toLowerCase();busy=true;
+  if(chatState==='idle'){
+    chatCat=detectCat(t);
+    if(t.length>60){showT();setTimeout(()=>{hideT();msg("Got it 👍 Checking impacts...",'in');showT();setTimeout(()=>{hideT();renderSchedule(genSchedule(chatCat,t));busy=false;chatState='idle';},1200);},700);}
+    else{chatState='asked';showT();setTimeout(()=>{hideT();msg(categories[chatCat].ask,'in');busy=false;},600);}
+  }else if(chatState==='asked'){
+    if(t.length>25||l.includes('monday')||l.includes('day')||l.includes('level')||l.match(/\d+/)){
+      chatState='idle';showT();const a=["Updating...","Recalculating...","Checking the critical path"];
+      setTimeout(()=>{hideT();msg(a[Math.floor(Math.random()*a.length)],'in');showT();setTimeout(()=>{hideT();renderSchedule(genSchedule(chatCat,t));busy=false;},1200);},600);
+    }else{
+      const f={schedule:"Which trade or task? Which level? 📅",progress:"Which task? Ahead or behind?",conflict:"Which trades? What day? ⚡",lookahead:"How many weeks ahead?",critical:"Which task is critical? 🎯",general:"More detail — which task and when? 📋"};
+      showT();setTimeout(()=>{hideT();msg(f[chatCat]||f.general,'in');busy=false;},600);
+    }
+  }else{
+    chatState='idle';chatCat=detectCat(t);
+    showT();setTimeout(()=>{hideT();msg("Got it, updating...",'in');showT();setTimeout(()=>{hideT();renderSchedule(genSchedule(chatCat,t));busy=false;},1200);},600);
+  }
+}
+
+function preset(k){
+  killAll();
+  resetChat();
+  userOwns=true;
+  const g=++gen;
+  setTimeout(()=>{if(gen===g)playScript(k);},300);
+}
+
+I.addEventListener('focus',killAll);
+
+function resetChat(){M.innerHTML='<div class="wa-date">Today</div><div class="wa-m wa-m-in">Hey 👋 Tell me about a schedule change and I\'ll show you the impact.<div class="wa-ts">now</div></div>';}
+
+const keys=['weather','voice','lookahead','clash','critical'];let li=0;
+function loop(){
+  if(userOwns)return;const g=gen;const k=keys[li%keys.length];li++;
+  playScript(k,()=>{if(gen!==g||userOwns)return;aT.push(setTimeout(()=>{if(gen!==g||userOwns)return;resetChat();aT.push(setTimeout(loop,600));},4000));});
+}
+aT.push(setTimeout(loop,1200));
+</script>
+</body>
+</html>

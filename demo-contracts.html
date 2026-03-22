@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>roen — Contract Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+@font-face {
+  font-family:'Cooper BT';
+  src:url('https://db.onlinewebfonts.com/t/2a88cde81e30e1095a498e3aa7ae3a0d.woff2') format('woff2');
+  font-weight:600; font-style:normal; font-display:swap;
+}
+:root{
+  --black:#0A0A0A;--white:#FFFFFF;--green:#00C853;
+  --gray:#8A8A8A;--surface:#141414;--border:#2A2A2A;--dim:#4a4a4a;
+  --logo:'Cooper BT',Georgia,serif;
+  --heading:'Open Sans',system-ui,sans-serif;
+  --body:'Open Sans',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',monospace;
+  --wa-bg:#0b141a;--wa-panel:#1f2c34;--wa-out:#005c4b;
+  --wa-text:#e9edef;--wa-muted:#8696a0;--wa-teal:#00a884;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{-webkit-font-smoothing:antialiased;}
+body{font-family:var(--body);background:var(--black);color:var(--white);min-height:100vh;overflow-x:hidden;}
+
+/* Atmospheric bg glow — matching pitch deck */
+body::before{
+  content:'';position:fixed;top:0;left:0;right:0;bottom:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(0,200,83,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at var(--gx,50%) var(--gy,40%), rgba(20,80,70,0.35) 0%, transparent 65%);
+  animation:glowDrift 12s ease-in-out infinite alternate;
+}
+@keyframes glowDrift{
+  0%{--gx:40%;--gy:35%;}
+  25%{--gx:55%;--gy:45%;}
+  50%{--gx:60%;--gy:30%;}
+  75%{--gx:45%;--gy:50%;}
+  100%{--gx:50%;--gy:35%;}
+}
+@property --gx{syntax:'<percentage>';inherits:false;initial-value:50%;}
+@property --gy{syntax:'<percentage>';inherits:false;initial-value:40%;}
+
+.page{position:relative;z-index:1;}
+
+/* Nav */
+.nav{padding:24px 48px;display:flex;justify-content:space-between;align-items:center;}
+.nav-logo{font-family:var(--logo);font-size:20px;font-weight:600;color:var(--white);text-decoration:none;display:flex;align-items:center;gap:7px;}
+.nav-dot{width:5px;height:5px;border-radius:50%;background:var(--green);}
+.nav-right{font-family:var(--mono);font-size:9px;font-weight:400;color:var(--dim);text-transform:uppercase;letter-spacing:2px;}
+
+/* Hero */
+.hero{text-align:center;padding:64px 48px 40px;max-width:720px;margin:0 auto;}
+.hero h1{
+  font-family:var(--heading);font-size:clamp(38px,5.5vw,60px);
+  font-weight:600;line-height:1.1;letter-spacing:-0.5px;margin-bottom:20px;
+}
+.hero p{font-size:15px;font-weight:300;color:var(--gray);line-height:1.75;max-width:500px;margin:0 auto;}
+
+/* Bordered card frame — pitch deck style */
+.frame{
+  max-width:1000px;margin:0 auto;
+  border:1px solid var(--border);border-radius:12px;
+  padding:48px;
+  background:var(--surface);
+}
+
+/* Demo layout */
+.demo{max-width:1080px;margin:0 auto;padding:0 48px 48px;display:flex;flex-direction:column;align-items:center;gap:36px;}
+
+/* Phone */
+.phone{width:370px;max-width:100%;height:700px;background:#000;border-radius:46px;padding:9px;position:relative;box-shadow:0 0 0 1px rgba(255,255,255,.04),0 50px 100px -20px rgba(0,0,0,.6);}
+.phone-island{width:86px;height:24px;background:#1a1a1a;border-radius:13px;position:absolute;top:15px;left:50%;transform:translateX(-50%);z-index:11;}
+.phone-screen{width:100%;height:100%;background:var(--wa-bg);border-radius:38px;overflow:hidden;display:flex;flex-direction:column;}
+
+/* WA chrome */
+.wa-hdr{background:var(--wa-panel);padding:50px 12px 9px;display:flex;align-items:center;gap:9px;}
+.wa-back{color:var(--wa-teal);font-size:17px;font-weight:300;}
+.wa-av{width:32px;height:32px;border-radius:50%;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-family:var(--logo);font-size:13px;font-weight:600;color:var(--white);}
+.wa-info{flex:1;}
+.wa-name{font-size:14px;font-weight:500;color:var(--wa-text);}
+.wa-stat{font-size:10px;color:var(--wa-teal);display:flex;align-items:center;gap:3px;}
+.wa-sd{width:3px;height:3px;border-radius:50%;background:var(--green);}
+
+.wa-msgs{flex:1;overflow-y:auto;padding:10px 9px;display:flex;flex-direction:column;gap:2px;scrollbar-width:none;}
+.wa-msgs::-webkit-scrollbar{display:none;}
+.wa-date{align-self:center;padding:3px 9px;border-radius:5px;background:rgba(255,255,255,.03);font-size:9.5px;color:var(--wa-muted);font-weight:500;margin:4px 0;}
+.wa-m{max-width:86%;padding:6px 9px 3px;border-radius:7px;font-size:12.5px;line-height:1.5;animation:mIn .3s cubic-bezier(.16,1,.3,1);}
+@keyframes mIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+.wa-m-out{align-self:flex-end;background:var(--wa-out);color:var(--wa-text);border-bottom-right-radius:2px;}
+.wa-m-in{align-self:flex-start;background:var(--wa-panel);color:var(--wa-text);border-bottom-left-radius:2px;}
+.wa-ts{font-size:8.5px;color:rgba(255,255,255,.18);text-align:right;margin-top:1px;}
+.wa-ck{color:rgba(83,176,220,.5);}
+.typing{display:flex;gap:3px;padding:9px 12px;align-self:flex-start;background:var(--wa-panel);border-radius:7px;border-bottom-left-radius:2px;}
+.td{width:4px;height:4px;background:var(--wa-muted);border-radius:50%;animation:tB 1.4s infinite;}
+.td:nth-child(2){animation-delay:.15s;}.td:nth-child(3){animation-delay:.3s;}
+@keyframes tB{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-3px);}}
+
+/* Contract Insight card */
+.ic{background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.05);border-radius:8px;padding:10px;margin-top:4px;}
+.ic-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid rgba(255,255,255,.05);}
+.ic-title{font-weight:600;font-size:11.5px;color:var(--wa-text);}
+.ic-id{font-family:var(--mono);font-size:8px;color:var(--wa-teal);font-weight:400;letter-spacing:.5px;}
+.ic-row{display:flex;justify-content:space-between;padding:1.5px 0;font-size:10.5px;}
+.ic-row-l{color:var(--wa-muted);}.ic-row-v{font-weight:600;color:var(--wa-text);}
+.ic-sep{height:1px;background:rgba(255,255,255,.05);margin:4px 0;}
+.ic-clause{display:flex;justify-content:space-between;padding-top:5px;margin-top:3px;border-top:1px solid rgba(255,255,255,.07);font-weight:600;font-size:11px;color:var(--green);}
+.ic-meta{display:flex;gap:12px;margin-top:5px;font-size:8px;color:var(--wa-muted);font-family:var(--mono);letter-spacing:.3px;}
+.ic-btns{display:flex;gap:4px;margin-top:7px;}
+.ic-btn{padding:6px 11px;border-radius:6px;font-size:9.5px;font-weight:600;cursor:pointer;border:none;font-family:var(--body);transition:all .2s;}
+.ic-go{background:var(--green);color:var(--black);}.ic-go:hover{filter:brightness(1.1);}
+.ic-ed{background:rgba(255,255,255,.08);color:var(--wa-text);}.ic-ed:hover{background:rgba(255,255,255,.12);}
+
+/* Agreement Preview card */
+.ac{background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.05);border-radius:8px;padding:10px;margin-top:4px;}
+.ac-hdr{display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.05);}
+.ac-icon{width:28px;height:34px;background:rgba(255,255,255,.06);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
+.ac-name{font-size:11px;font-weight:600;color:var(--wa-text);}
+.ac-size{font-size:9px;color:var(--wa-muted);}
+.ac-body{font-size:10px;color:var(--wa-muted);line-height:1.5;}
+.ac-row{display:flex;justify-content:space-between;padding:2px 0;font-size:10px;}
+.ac-footer{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-between;align-items:center;}
+.ac-badge{font-family:var(--mono);font-size:8px;color:var(--green);letter-spacing:.5px;}
+.ac-logo{font-family:var(--logo);font-size:10px;color:var(--dim);}
+
+/* Input */
+.wa-bar{padding:6px 9px;background:var(--wa-panel);display:flex;gap:6px;align-items:center;}
+.wa-inp{flex:1;padding:8px 13px;border-radius:18px;border:none;background:#2a3942;color:var(--wa-text);font-size:13px;font-family:var(--body);outline:none;}
+.wa-inp:focus{background:#2f4050;}
+.wa-inp::placeholder{color:var(--wa-muted);}
+.wa-send{width:32px;height:32px;border-radius:50%;background:var(--wa-teal);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .15s;flex-shrink:0;}
+.wa-send:hover{transform:scale(1.06);}
+.wa-send svg{fill:#fff;width:13px;height:13px;}
+
+/* Presets — 3 top row, 2 bottom row, white outline */
+.presets{display:flex;flex-direction:column;align-items:center;gap:8px;}
+.preset-row{display:flex;gap:8px;justify-content:center;}
+.pill{
+  padding:10px 20px;border-radius:8px;
+  background:transparent;border:1px solid rgba(255,255,255,.35);
+  font-size:13px;font-weight:400;color:#ddd;
+  cursor:pointer;font-family:var(--body);transition:all .25s;
+  display:flex;align-items:center;gap:6px;
+}
+.pill:hover{border-color:rgba(255,255,255,.7);color:var(--white);background:rgba(255,255,255,.05);}
+.pill-emoji{font-size:15px;}
+
+/* Stats — matching pitch deck layout */
+.stats-section{max-width:1000px;margin:0 auto;padding:40px 48px;}
+.stats-frame{
+  border:1px solid var(--border);border-radius:12px;
+  padding:40px 48px;background:var(--surface);
+  display:flex;gap:0;
+}
+.stat-block{flex:1;text-align:center;}
+.stat-block+.stat-block{border-left:1px solid var(--border);}
+.stat-val{font-family:var(--heading);font-size:36px;font-weight:600;color:var(--white);letter-spacing:-.5px;}
+.stat-lbl{font-family:var(--mono);font-size:8px;font-weight:400;color:var(--dim);text-transform:uppercase;letter-spacing:2px;margin-top:6px;}
+.stat-desc{font-size:12px;font-weight:300;color:var(--gray);line-height:1.5;margin-top:8px;max-width:200px;margin-left:auto;margin-right:auto;}
+
+/* How */
+.how{max-width:680px;margin:0 auto;padding:40px 48px 48px;text-align:center;}
+.how h2{font-family:var(--heading);font-size:24px;font-weight:600;color:var(--white);margin-bottom:24px;}
+.how-steps{display:flex;flex-direction:column;gap:12px;text-align:left;}
+.how-step{display:flex;gap:12px;align-items:flex-start;}
+.how-num{font-family:var(--mono);font-size:9px;font-weight:400;color:var(--dim);width:18px;flex-shrink:0;padding-top:3px;}
+.how-txt{font-size:13px;font-weight:300;color:var(--gray);line-height:1.6;}
+.how-txt strong{font-weight:600;color:var(--white);}
+
+/* Showcase */
+.showcase{max-width:800px;margin:0 auto;padding:40px 48px 48px;}
+.showcase h2{font-family:var(--heading);font-size:22px;font-weight:600;color:var(--white);text-align:center;margin-bottom:8px;}
+.showcase-sub{font-size:14px;font-weight:300;color:var(--gray);text-align:center;margin-bottom:32px;line-height:1.6;}
+.showcase-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.sc-card{padding:20px;border:1px solid var(--border);border-radius:10px;background:var(--surface);transition:border-color .2s;display:flex;flex-direction:column;min-height:120px;}
+.sc-card:hover{border-color:rgba(255,255,255,.12);}
+.sc-emoji{font-size:20px;margin-bottom:10px;}
+.sc-title{font-family:var(--heading);font-size:13px;font-weight:600;color:var(--white);margin-bottom:4px;}
+.sc-desc{font-size:12px;font-weight:300;color:var(--gray);line-height:1.5;}
+@media(max-width:600px){.showcase-grid{grid-template-columns:1fr;}.showcase{padding:28px 24px 36px;}}
+
+/* Voice message bubble */
+.voice-bubble{display:flex;align-items:center;gap:8px;padding:4px 0;}
+.voice-play{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.voice-play svg{width:10px;height:10px;fill:var(--wa-text);}
+.voice-wave{flex:1;height:24px;display:flex;align-items:center;gap:1.5px;}
+.voice-bar{width:2.5px;border-radius:2px;background:rgba(255,255,255,.25);transition:height .15s;}
+.voice-bar.active{background:var(--wa-teal);}
+.voice-time{font-size:9px;color:var(--wa-muted);flex-shrink:0;width:28px;text-align:right;}
+.voice-transcript{margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.05);font-size:11px;color:var(--wa-muted);font-style:italic;}
+.voice-transcript strong{font-style:normal;color:var(--wa-text);font-weight:500;}
+
+/* Footer */
+.foot{padding:24px 48px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.foot-logo{font-family:var(--logo);font-size:15px;font-weight:600;color:var(--dim);text-decoration:none;display:flex;align-items:center;gap:5px;}
+.foot-d{width:3px;height:3px;border-radius:50%;background:var(--green);}
+.foot-link{font-family:var(--mono);font-size:8px;color:var(--dim);text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;}.foot-link:hover{color:var(--gray);}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);padding:9px 18px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--white);font-size:12px;font-weight:400;z-index:200;opacity:0;transition:all .3s;pointer-events:none;display:flex;align-items:center;gap:6px;}
+.toast-d{width:4px;height:4px;border-radius:50%;background:var(--green);flex-shrink:0;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+@media(max-width:900px){
+  .stats-frame{flex-direction:column;gap:20px;}
+  .stat-block+.stat-block{border-left:none;border-top:1px solid var(--border);padding-top:20px;}
+  .showcase-grid{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:700px){
+  .nav{padding:16px 20px;}
+  .nav-logo{font-size:18px;}
+  .nav-right{font-size:8px;letter-spacing:1.5px;}
+  .hero{padding:36px 20px 24px;max-width:100%;}
+  .hero h1{font-size:28px;letter-spacing:-0.8px;line-height:1.15;}
+  .hero p{font-size:14px;line-height:1.65;}
+  .demo{padding:0 16px 32px;gap:40px;}
+  .phone{width:100%;max-width:340px;height:auto;aspect-ratio:370/700;border-radius:36px;padding:8px;}
+  .phone-island{width:70px;height:20px;border-radius:11px;top:12px;}
+  .phone-screen{border-radius:30px;}
+  .wa-hdr{padding:42px 10px 8px;}
+  .wa-av{width:28px;height:28px;font-size:11px;}
+  .wa-name{font-size:13px;}
+  .wa-stat{font-size:9px;}
+  .wa-msgs{padding:8px 8px;}
+  .wa-m{font-size:12px;padding:5px 8px 3px;max-width:88%;}
+  .wa-bar{padding:5px 8px;}
+  .wa-inp{font-size:12px;padding:8px 12px;border-radius:16px;}
+  .wa-send{width:30px;height:30px;}
+  .wa-send svg{width:12px;height:12px;}
+  .ic{padding:10px;}
+  .ic-title{font-size:11px;}
+  .ic-row{font-size:10px;}
+  .ic-clause{font-size:11px;}
+  .ic-btn{font-size:9px;padding:6px 10px;}
+  .presets{gap:8px;margin-top:8px;}
+  .preset-row{gap:6px;flex-wrap:wrap;}
+  .pill{padding:8px 14px;font-size:11px;border-radius:6px;}
+  .pill-emoji{font-size:13px;}
+  .stats-section{padding:24px 20px;}
+  .stats-frame{padding:24px 20px;}
+  .stat-val{font-size:28px;}
+  .stat-lbl{font-size:7px;letter-spacing:1.5px;}
+  .stat-desc{font-size:11px;margin-top:6px;}
+  .how{padding:24px 20px 32px;max-width:100%;}
+  .how h2{font-size:20px;margin-bottom:20px;}
+  .how-txt{font-size:12px;}
+  .showcase{padding:24px 20px 32px;}
+  .showcase h2{font-size:20px;}
+  .showcase-sub{font-size:13px;margin-bottom:24px;}
+  .showcase-grid{grid-template-columns:1fr;gap:10px;}
+  .sc-card{padding:16px;}
+  .sc-emoji{font-size:18px;margin-bottom:6px;}
+  .sc-title{font-size:12px;}
+  .sc-desc{font-size:11px;}
+  .foot{padding:16px 20px;}
+  .foot-logo{font-size:14px;}
+  .toast{font-size:11px;padding:8px 14px;bottom:16px;}
+}
+@media(max-width:380px){
+  .hero h1{font-size:24px;}
+  .hero p{font-size:13px;}
+  .phone{max-width:300px;}
+  .pill{padding:7px 12px;font-size:10px;}
+  .stat-val{font-size:24px;}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<nav class="nav">
+  <a href="https://roenai.com" class="nav-logo"><span class="nav-dot"></span>roen</a>
+  <span class="nav-right">Product Demo</span>
+</nav>
+
+<div class="hero">
+  <h1>Ask your contracts anything</h1>
+  <p>Need to check a clause at 10pm before tomorrow's meeting? Want to know if the scope change is covered? Ask roen. It reads every contract on the project and gives you the answer in seconds — with the exact clause reference.</p>
+</div>
+
+<div class="demo">
+  <div class="phone">
+    <div class="phone-island"></div>
+    <div class="phone-screen">
+      <div class="wa-hdr">
+        <span class="wa-back">&lsaquo;</span>
+        <div class="wa-av">r</div>
+        <div class="wa-info">
+          <div class="wa-name">roen</div>
+          <div class="wa-stat" id="hdrStat"><span class="wa-sd"></span>online</div>
+        </div>
+      </div>
+      <div class="wa-msgs" id="msgs">
+        <div class="wa-date">Today</div>
+        <div class="wa-m wa-m-in">Hey 👋 Ask me about any clause, obligation, or risk in your contracts.<div class="wa-ts">now</div></div>
+      </div>
+      <div class="wa-bar">
+        <input class="wa-inp" id="inp" placeholder="Ask about any clause..." onkeydown="if(event.key==='Enter')send()">
+        <button class="wa-send" onclick="send()"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+      </div>
+    </div>
+  </div>
+  <div class="presets">
+    <div class="preset-row">
+      <button class="pill" onclick="preset('clause')"><span class="pill-emoji">📄</span>Check a clause</button>
+      <button class="pill" onclick="preset('voice')"><span class="pill-emoji">🎙️</span>Voice query</button>
+      <button class="pill" onclick="preset('agreement')"><span class="pill-emoji">🏗️</span>Sub agreement</button>
+    </div>
+    <div class="preset-row">
+      <button class="pill" onclick="preset('risk')"><span class="pill-emoji">⚠️</span>Risk flag</button>
+      <button class="pill" onclick="preset('scope')"><span class="pill-emoji">📐</span>Scope boundary</button>
+    </div>
+  </div>
+</div>
+
+<div class="stats-section">
+  <div class="stats-frame">
+    <div class="stat-block"><div class="stat-val">&lt;8s</div><div class="stat-lbl">Clause Lookup</div><div class="stat-desc">From question to exact clause reference with section number and interpretation.</div></div>
+    <div class="stat-block"><div class="stat-val">100%</div><div class="stat-lbl">Contract Coverage</div><div class="stat-desc">Every clause, every sub-agreement, every amendment searchable in natural language.</div></div>
+    <div class="stat-block"><div class="stat-val">73%</div><div class="stat-lbl">Risk Reduction</div><div class="stat-desc">Contractual risks identified and flagged before they become disputes.</div></div>
+  </div>
+</div>
+
+<div class="how">
+  <h2>How it works</h2>
+  <div class="how-steps">
+    <div class="how-step"><div class="how-num">01</div><div class="how-txt"><strong>Ask in plain language</strong> — query any contract term, clause, or obligation like you're asking a colleague.</div></div>
+    <div class="how-step"><div class="how-num">02</div><div class="how-txt"><strong>AI searches all contracts</strong> — scans head contract, sub-agreements, amendments, and variations on the project.</div></div>
+    <div class="how-step"><div class="how-num">03</div><div class="how-txt"><strong>Get the answer with references</strong> — exact clause number, section, and plain-language interpretation.</div></div>
+    <div class="how-step"><div class="how-num">04</div><div class="how-txt"><strong>Generate or flag</strong> — draft new agreements, flag risks, or export clauses for meeting prep.</div></div>
+  </div>
+</div>
+
+<div class="showcase">
+  <h2>What the agent can do</h2>
+  <p class="showcase-sub">@contract agent uses your project contracts, amendments, and obligations.</p>
+  <div class="showcase-grid">
+    <div class="sc-card">
+      <div class="sc-emoji">🔍</div>
+      <div class="sc-title">Search any clause</div>
+      <div class="sc-desc">Natural language search across all contracts. "What are our retention terms?" Returns the clause with section number.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">📋</div>
+      <div class="sc-title">Generate sub agreements</div>
+      <div class="sc-desc">Describe the scope and the agent drafts a subcontractor agreement aligned to your head contract terms.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">⚠️</div>
+      <div class="sc-title">Risk identification</div>
+      <div class="sc-desc">AI flags clauses that create exposure. Liquidated damages, indemnities, scope gaps, and conflicting terms.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">📊</div>
+      <div class="sc-title">Obligation tracking</div>
+      <div class="sc-desc">Track all contractual obligations, deadlines, and milestones across every agreement on the project.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">🔗</div>
+      <div class="sc-title">Amendment history</div>
+      <div class="sc-desc">Full audit trail of every contract change, who approved it, when, and the impact on obligations.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">📄</div>
+      <div class="sc-title">Export for meetings</div>
+      <div class="sc-desc">Pull relevant clauses into a briefing doc for client meetings, disputes, or change negotiations.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">⏱️</div>
+      <div class="sc-title">Deadline alerts</div>
+      <div class="sc-desc">"Practical completion deadline in 14 days — 3 open items remaining." Proactive compliance tracking.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">🤝</div>
+      <div class="sc-title">Comparison view</div>
+      <div class="sc-desc">Compare two contract versions side-by-side. Changes highlighted automatically with impact analysis.</div>
+    </div>
+  </div>
+</div>
+
+<footer class="foot">
+  <a href="https://roenai.com" class="foot-logo"><span class="foot-d"></span>roen</a>
+  <a href="https://roenai.com" class="foot-link">roenai.com</a>
+</footer>
+
+</div>
+<div class="toast" id="toast"><span class="toast-d"></span><span id="toastTxt"></span></div>
+
+<script>
+const M=document.getElementById('msgs'),I=document.getElementById('inp'),S=document.getElementById('hdrStat');
+let busy=false,userOwns=false,aT=[],gen=0;
+
+function ts(){const n=new Date;return n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0');}
+function msg(t,d){const e=document.createElement('div');e.className='wa-m wa-m-'+d;if(d==='in')e.style.maxWidth='92%';e.innerHTML=t+'<div class="wa-ts">'+ts()+(d==='out'?' <span class="wa-ck">✓✓</span>':'')+'</div>';M.appendChild(e);M.scrollTop=M.scrollHeight;}
+
+let typ=null;
+function showT(){S.innerHTML='<span class="wa-sd"></span>typing...';typ=document.createElement('div');typ.className='typing';typ.innerHTML='<div class="td"></div><div class="td"></div><div class="td"></div>';M.appendChild(typ);M.scrollTop=M.scrollHeight;}
+function hideT(){S.innerHTML='<span class="wa-sd"></span>online';if(typ){typ.remove();typ=null;}}
+function toast(m){const t=document.getElementById('toast');document.getElementById('toastTxt').textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+function voiceMsgAnim(dur,transcript,g,cb){
+  const e=document.createElement('div');e.className='wa-m wa-m-out';
+  const bars=Array.from({length:32},()=>4+Math.floor(Math.random()*16));
+  e.innerHTML='<div class="voice-bubble"><div class="voice-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div><div class="voice-wave">'+bars.map(h=>'<div class="voice-bar" style="height:'+h+'px"></div>').join('')+'</div><div class="voice-time">0:00</div></div><div class="wa-ts">'+ts()+' <span class="wa-ck">✓✓</span></div>';
+  M.appendChild(e);M.scrollTop=M.scrollHeight;
+  const barEls=e.querySelectorAll('.voice-bar'),timeEl=e.querySelector('.voice-time');
+  let ci=0;const step=Math.floor((dur*1000)/barEls.length);
+  const iv=setInterval(()=>{
+    if(gen!==g){clearInterval(iv);return;}
+    if(ci<barEls.length){barEls[ci].classList.add('active');timeEl.textContent='0:'+Math.floor((ci/barEls.length)*dur).toString().padStart(2,'0');ci++;}
+    else{clearInterval(iv);timeEl.textContent='0:'+dur.toString().padStart(2,'0');
+      if(transcript){const tr=document.createElement('div');tr.className='voice-transcript';tr.innerHTML='🎙️ <strong>Transcribed:</strong> '+transcript;e.insertBefore(tr,e.querySelector('.wa-ts'));M.scrollTop=M.scrollHeight;}
+      setTimeout(()=>{if(gen===g&&cb)cb();},400);}
+  },step);
+}
+
+let lastInsight=null;
+function renderInsight(d){
+  lastInsight=d;
+  const e=document.createElement('div');e.className='wa-m wa-m-in';e.style.maxWidth='92%';
+  const rows=d.items.map(i=>'<div class="ic-row"><span class="ic-row-l">'+i.n+'</span><span class="ic-row-v">'+i.v+'</span></div>').join('');
+  e.innerHTML="Here's what I found 📋"+
+    '<div class="ic"><div class="ic-hdr"><span class="ic-title">'+d.t+'</span><span class="ic-id">'+d.id+'</span></div>'+rows+
+    '<div class="ic-sep"></div>'+
+    '<div class="ic-clause"><span>Clause '+d.clause+'</span><span>Section '+d.section+'</span></div>'+
+    '<div class="ic-meta"><span>📄 '+d.doc+'</span><span>🔍 RELEVANCE: '+d.relevance+'</span></div>'+
+    '<div class="ic-btns"><button class="ic-btn ic-go" onclick="killAll();acceptI(\''+d.id+'\')">✓ Copy clause</button><button class="ic-btn ic-ed" onclick="killAll();exportI()">Export</button></div></div>'+
+    '<div class="wa-ts">'+ts()+'</div>';
+  M.appendChild(e);M.scrollTop=M.scrollHeight;
+}
+
+function renderAgreement(d){
+  const e=document.createElement('div');e.className='wa-m wa-m-in';e.style.maxWidth='92%';
+  const rows=d.items.map(i=>'<div class="ac-row"><span>'+i.n+'</span><span>'+i.v+'</span></div>').join('');
+  e.innerHTML='Agreement drafted 🏗️'+
+    '<div class="ac"><div class="ac-hdr"><div class="ac-icon">📄</div><div><div class="ac-name">'+d.t+'</div><div class="ac-size">'+d.pages+' pages • Ready for review</div></div></div><div class="ac-body">'+rows+'<div class="ac-footer"><span class="ac-badge">ALIGNED TO HEAD CONTRACT</span><span class="ac-logo">roen</span></div></div></div>'+
+    '<div class="wa-ts">'+ts()+'</div>';
+  M.appendChild(e);M.scrollTop=M.scrollHeight;
+}
+
+function acceptI(id){
+  msg('Copy that to my briefing doc ✅','out');showT();
+  setTimeout(()=>{hideT();msg('Clause copied and added to project brief. Updated brief has 12 clauses — ready for your 3pm meeting 📋','in');toast('Clause copied — added to brief');},700);
+}
+function exportI(){msg('Export this clause','out');showT();setTimeout(()=>{hideT();msg('Exported to PDF. Check your project folder 📄','in');busy=false;},700);}
+
+const scripts={
+  clause:[
+    {d:'out',t:"Does our contract cover delays due to weather?"},
+    {d:'in',t:"Searching your contracts now... 🔍"},
+    {d:'insight',data:{t:"Weather Delays & Force Majeure",id:"2.14.3",clause:"2.14.3",section:"2.14 (Force Majeure)",items:[{n:"Coverage",v:"Yes, included"},{n:"Scope",v:"Acts of God — weather, natural disasters"},{n:"Extension",v:"Time and cost"}],doc:"Main Contract",relevance:"100%"}}
+  ],
+  voice:[
+    {d:'voice',dur:6,transcript:"Yeah so client's talking about liquidated damages if we miss practical completion. Are we protected there? What's in our contract?"},
+    {d:'in',t:"Got it 🎙️ Checking liquidated damages provisions... "},
+    {d:'insight',data:{t:"Liquidated Damages Protection",id:"8.6.2",clause:"8.6.2",section:"8.6 (Remedies)",items:[{n:"Cap Amount",v:"0.5% contract value"},{n:"Limit",v:"Only for time delays"},{n:"You're protected",v:"If you claim variation"}],doc:"Main Contract",relevance:"98%"}}
+  ],
+  risk:[
+    {d:'out',t:"Are we exposed if the client delays material approvals?"},
+    {d:'in',t:"Checking your contracts for exposure... ⚠️"},
+    {d:'in',t:"Red flag found:<br><br><strong>Section 3.2</strong> — Client approval required before ordering. No time frame specified.<br><strong>Your exposure:</strong> Delay costs fall on you if client doesn't approve within 7 days.<br><br><strong>Suggestion:</strong> Add written clause amendment specifying 5-day approval window."},
+    {d:'out',t:"Send me a draft amendment"},
+    {d:'in',t:"One sec 🔨",delay:900},
+    {d:'agreement',data:{t:"Amendment: Approval Timeline",pages:"1",items:[{n:"Clause affected",v:"3.2 (Client approvals)"},{n:"New terms",v:"5 business days max"},{n:"Aligned to",v:"Main contract timeframe"},{n:"Status",v:"Draft ready for review"}]}}
+  ],
+  agreement:[
+    {d:'out',t:"Generate a subcontractor agreement for the electrical work"},
+    {d:'in',t:"Tell me the scope and your subs usual rates 🏗️"},
+    {d:'out',t:"JM Electrical, $45/hour, 120 hours budgeted. Standard mainwork — run cables, circuits, testing"},
+    {d:'in',t:"Pulling standard terms from your head contract... One sec 🔨",delay:1200},
+    {d:'agreement',data:{t:"Sub Agreement: JM Electrical",pages:"3",items:[{n:"Parties",v:"You, JM Electrical"},{n:"Scope",v:"Electrical mainwork"},{n:"Rate",v:"$45/hr, max 120h"},{n:"Terms",v:"Aligned to main contract"},{n:"Insurance",v:"Required — public liability"}]}}
+  ],
+  scope:[
+    {d:'out',t:"Is the landscaping in our scope or the client's responsibility?"},
+    {d:'in',t:"Checking scope definitions... 🔍"},
+    {d:'insight',data:{t:"Scope Boundary: Landscaping",id:"1.3.2",clause:"1.3.2",section:"1.3 (Scope of Work)",items:[{n:"Your scope",v:"Perimeter fencing"},{n:"Client scope",v:"All landscaping"},{n:"Boundary",v:"Clear — as per attached plan"}],doc:"Main Contract + Schedule A",relevance:"99%"}}
+  ]
+};
+
+// Typing animation for outgoing messages
+function typeAndSend(text,g,cb){
+  I.value='';let ci=0;const spd=25+Math.random()*15;
+  function go(){
+    if(gen!==g){I.value='';return;}
+    if(ci<text.length){I.value+=text[ci];ci++;I.scrollLeft=I.scrollWidth;setTimeout(go,spd+(Math.random()>.85?120:0));}
+    else setTimeout(()=>{if(gen!==g){I.value='';return;}I.value='';msg(text,'out');if(cb)cb();},300);
+  }
+  go();
+}
+
+function playScript(key,cb){
+  const steps=scripts[key];if(!steps)return;
+  let i=0;const g=gen;busy=true;
+  function next(){
+    if(gen!==g){busy=false;return;}
+    if(i>=steps.length){busy=false;if(cb)cb();return;}
+    const s=steps[i];i++;
+    if(s.d==='out'){
+      typeAndSend(s.t,g,()=>{if(gen===g)setTimeout(next,400);});
+    }else if(s.d==='in'){
+      showT();setTimeout(()=>{if(gen!==g){hideT();return;}hideT();msg(s.t,'in');setTimeout(next,s.delay||900);},700+Math.random()*500);
+    }else if(s.d==='insight'){
+      showT();setTimeout(()=>{if(gen!==g){hideT();return;}hideT();renderInsight(s.data);setTimeout(()=>{busy=false;if(gen===g&&cb)cb();},200);},1200);
+    }else if(s.d==='agreement'){
+      showT();setTimeout(()=>{if(gen!==g){hideT();return;}hideT();renderAgreement(s.data);setTimeout(()=>{busy=false;if(gen===g&&cb)cb();},200);},1200);
+    }else if(s.d==='voice'){
+      voiceMsgAnim(s.dur||6,s.transcript,g,()=>{if(gen===g)setTimeout(next,400);});
+    }
+  }
+  next();
+}
+
+// Kill everything
+function killAll(){gen++;userOwns=true;aT.forEach(t=>clearTimeout(t));aT=[];busy=false;hideT();I.value='';chatState='idle';}
+
+// Smart user input
+const categories={
+  clause:{kw:['clause','coverage','indemnity','retention','delay','warranty','defect','performance'],ask:"Which contract and what clause are you looking for? 📄"},
+  risk:{kw:['risk','exposed','exposure','danger','problem','issue','conflict','gap'],ask:"What's the scope or situation? I'll check for contractual exposure. 🔍"},
+  obligation:{kw:['deadline','obligation','requirement','must','should','need','date','due'],ask:"What obligation or deadline? I'll find all related clauses. ⏱️"},
+  amendment:{kw:['change','modify','amend','amendment','variation','update','new','add'],ask:"What change do you need? I'll check impact on other clauses. 📝"},
+  general:{kw:[],ask:"What do you need? Clause search, risk flag, obligation check, or something else? 📋"}
+};
+function detectCat(t){const l=t.toLowerCase();for(const[c,v]of Object.entries(categories)){if(c==='general')continue;if(v.kw.some(k=>l.includes(k)))return c;}return'general';}
+function genInsight(cat,text){
+  const l=text.toLowerCase(),id='C-'+Math.floor(1000+Math.random()*8999);
+  const T={
+    clause:{t:"Clause Reference",section:"2.5",clause:"2.5.1",items:[{n:"Definition",v:"Clear and specific"},{n:"Scope",v:"Covers your situation"},{n:"Impact",v:"Favorable to you"}],doc:"Main Contract",relevance:"96%"},
+    risk:{t:"Risk Assessment",section:"3.1",clause:"3.1.2",items:[{n:"Risk level",v:"Medium"},{n:"Exposure",v:"Cost and delay"},{n:"Mitigation",v:"Requires amendment"}],doc:"Main Contract",relevance:"92%"},
+    obligation:{t:"Obligation Tracking",section:"4.2",clause:"4.2.1",items:[{n:"Due date",v:"In 14 days"},{n:"Responsible party",v:"You and contractor"},{n:"Consequence",v:"Specified penalty"}],doc:"Main Contract",relevance:"99%"},
+    amendment:{t:"Amendment Impact",section:"1.1",clause:"1.1.3",items:[{n:"Change scope",v:"Extends timeline"},{n:"Cost impact",v:"Variation payable"},{n:"Approval",v:"Required by client"}],doc:"Main Contract",relevance:"95%"},
+    general:{t:"Contract Summary",section:"1.0",clause:"1.0 (General)",items:[{n:"Type",v:"Standard JCT"},{n:"Key terms",v:"Confirmed"},{n:"Status",v:"Fully executed"}],doc:"Main Contract",relevance:"100%"}
+  };
+  const tmpl=T[cat]||T.general;return{t:tmpl.t,id,section:tmpl.section,clause:tmpl.clause,items:tmpl.items,doc:tmpl.doc,relevance:tmpl.relevance};
+}
+function genAgreement(cat,text){
+  const id='AGR-'+Math.floor(100+Math.random()*899);
+  return{t:"Subcontractor Agreement",pages:"2-3",items:[{n:"Parties",v:"You & subcontractor"},{n:"Scope",v:"As described"},{n:"Terms",v:"Aligned to head contract"},{n:"Insurance",v:"Public liability required"},{n:"Completion",v:"Per schedule"}]};
+}
+
+let chatState='idle',chatCat='general';
+
+function send(){
+  killAll();
+  const t=I.value.trim();if(!t)return;I.value='';msg(t,'out');
+  const l=t.toLowerCase();busy=true;
+  if(chatState==='idle'){
+    chatCat=detectCat(t);
+    if(t.length>60){showT();setTimeout(()=>{hideT();msg("Searching your contracts 🔍",'in');showT();setTimeout(()=>{hideT();renderInsight(genInsight(chatCat,t));busy=false;chatState='idle';},1200);},700);}
+    else{chatState='asked';showT();setTimeout(()=>{hideT();msg(categories[chatCat].ask,'in');busy=false;},600);}
+  }else if(chatState==='asked'){
+    if(t.length>30||l.includes('contract')||l.includes('scope')||l.includes('main')||l.includes('sub')){
+      chatState='idle';showT();const a=["Searching your contracts... 🔍","Checking all documents...","Pulling relevant clauses..."];
+      setTimeout(()=>{hideT();msg(a[Math.floor(Math.random()*a.length)],'in');showT();setTimeout(()=>{hideT();if(chatCat==='amendment'||l.includes('draft')||l.includes('agreement')){renderAgreement(genAgreement(chatCat,t));}else{renderInsight(genInsight(chatCat,t));}busy=false;},1200);},600);
+    }else{
+      const f={clause:"Which specific clause or term? 📄",risk:"What's the risk scenario? 🔍",obligation:"What deadline or obligation? ⏱️",amendment:"What change are you proposing? 📝",general:"Can you tell me more? 🤔"};
+      showT();setTimeout(()=>{hideT();msg(f[chatCat]||f.general,'in');busy=false;},600);
+    }
+  }else{
+    chatState='idle';chatCat=detectCat(t);
+    showT();setTimeout(()=>{hideT();msg("Checking contracts 🔍",'in');showT();setTimeout(()=>{hideT();renderInsight(genInsight(chatCat,t));busy=false;},1200);},600);
+  }
+}
+
+function preset(k){
+  killAll();
+  resetChat();
+  userOwns=true;
+  const g=++gen;
+  setTimeout(()=>{if(gen===g)playScript(k);},300);
+}
+
+I.addEventListener('focus',killAll);
+
+function resetChat(){M.innerHTML='<div class="wa-date">Today</div><div class="wa-m wa-m-in">Hey 👋 Ask me about any clause, obligation, or risk in your contracts.<div class="wa-ts">now</div></div>';}
+
+const keys=['clause','voice','risk','agreement','scope'];let li=0;
+function loop(){
+  if(userOwns)return;const g=gen;const k=keys[li%keys.length];li++;
+  playScript(k,()=>{if(gen!==g||userOwns)return;aT.push(setTimeout(()=>{if(gen!==g||userOwns)return;resetChat();aT.push(setTimeout(loop,600));},4000));});
+}
+aT.push(setTimeout(loop,1200));
+</script>
+</body>
+</html>

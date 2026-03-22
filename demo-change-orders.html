@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>roen — Change Order Processing</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+@font-face {
+  font-family:'Cooper BT';
+  src:url('https://db.onlinewebfonts.com/t/2a88cde81e30e1095a498e3aa7ae3a0d.woff2') format('woff2');
+  font-weight:600; font-style:normal; font-display:swap;
+}
+:root{
+  --black:#0A0A0A;--white:#FFFFFF;--green:#00C853;
+  --gray:#8A8A8A;--surface:#141414;--border:#2A2A2A;--dim:#4a4a4a;
+  --logo:'Cooper BT',Georgia,serif;
+  --heading:'Open Sans',system-ui,sans-serif;
+  --body:'Open Sans',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',monospace;
+  --wa-bg:#0b141a;--wa-panel:#1f2c34;--wa-out:#005c4b;
+  --wa-text:#e9edef;--wa-muted:#8696a0;--wa-teal:#00a884;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{-webkit-font-smoothing:antialiased;}
+body{font-family:var(--body);background:var(--black);color:var(--white);min-height:100vh;overflow-x:hidden;}
+
+/* Atmospheric bg glow — matching pitch deck */
+body::before{
+  content:'';position:fixed;top:0;left:0;right:0;bottom:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(0,200,83,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at var(--gx,50%) var(--gy,40%), rgba(20,80,70,0.35) 0%, transparent 65%);
+  animation:glowDrift 12s ease-in-out infinite alternate;
+}
+@keyframes glowDrift{
+  0%{--gx:40%;--gy:35%;}
+  25%{--gx:55%;--gy:45%;}
+  50%{--gx:60%;--gy:30%;}
+  75%{--gx:45%;--gy:50%;}
+  100%{--gx:50%;--gy:35%;}
+}
+@property --gx{syntax:'<percentage>';inherits:false;initial-value:50%;}
+@property --gy{syntax:'<percentage>';inherits:false;initial-value:40%;}
+
+.page{position:relative;z-index:1;}
+
+/* Nav */
+.nav{padding:24px 48px;display:flex;justify-content:space-between;align-items:center;}
+.nav-logo{font-family:var(--logo);font-size:20px;font-weight:600;color:var(--white);text-decoration:none;display:flex;align-items:center;gap:7px;}
+.nav-dot{width:5px;height:5px;border-radius:50%;background:var(--green);}
+.nav-right{font-family:var(--mono);font-size:9px;font-weight:400;color:var(--dim);text-transform:uppercase;letter-spacing:2px;}
+
+/* Hero */
+.hero{text-align:center;padding:64px 48px 40px;max-width:720px;margin:0 auto;}
+.hero h1{
+  font-family:var(--heading);font-size:clamp(38px,5.5vw,60px);
+  font-weight:600;line-height:1.1;letter-spacing:-0.5px;margin-bottom:20px;
+}
+.hero p{font-size:15px;font-weight:300;color:var(--gray);line-height:1.75;max-width:500px;margin:0 auto;}
+
+/* Bordered card frame — pitch deck style */
+.frame{
+  max-width:1000px;margin:0 auto;
+  border:1px solid var(--border);border-radius:12px;
+  padding:48px;
+  background:var(--surface);
+}
+
+/* Demo layout */
+.demo{max-width:1080px;margin:0 auto;padding:0 48px 48px;display:flex;flex-direction:column;align-items:center;gap:36px;}
+
+/* Phone */
+.phone{width:370px;max-width:100%;height:700px;background:#000;border-radius:46px;padding:9px;position:relative;box-shadow:0 0 0 1px rgba(255,255,255,.04),0 50px 100px -20px rgba(0,0,0,.6);}
+.phone-island{width:86px;height:24px;background:#1a1a1a;border-radius:13px;position:absolute;top:15px;left:50%;transform:translateX(-50%);z-index:11;}
+.phone-screen{width:100%;height:100%;background:var(--wa-bg);border-radius:38px;overflow:hidden;display:flex;flex-direction:column;}
+
+/* WA chrome */
+.wa-hdr{background:var(--wa-panel);padding:50px 12px 9px;display:flex;align-items:center;gap:9px;}
+.wa-back{color:var(--wa-teal);font-size:17px;font-weight:300;}
+.wa-av{width:32px;height:32px;border-radius:50%;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-family:var(--logo);font-size:13px;font-weight:600;color:var(--white);}
+.wa-info{flex:1;}
+.wa-name{font-size:14px;font-weight:500;color:var(--wa-text);}
+.wa-stat{font-size:10px;color:var(--wa-teal);display:flex;align-items:center;gap:3px;}
+.wa-sd{width:3px;height:3px;border-radius:50%;background:var(--green);}
+
+.wa-msgs{flex:1;overflow-y:auto;padding:10px 9px;display:flex;flex-direction:column;gap:2px;scrollbar-width:none;}
+.wa-msgs::-webkit-scrollbar{display:none;}
+.wa-date{align-self:center;padding:3px 9px;border-radius:5px;background:rgba(255,255,255,.03);font-size:9.5px;color:var(--wa-muted);font-weight:500;margin:4px 0;}
+.wa-m{max-width:86%;padding:6px 9px 3px;border-radius:7px;font-size:12.5px;line-height:1.5;animation:mIn .3s cubic-bezier(.16,1,.3,1);}
+@keyframes mIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+.wa-m-out{align-self:flex-end;background:var(--wa-out);color:var(--wa-text);border-bottom-right-radius:2px;}
+.wa-m-in{align-self:flex-start;background:var(--wa-panel);color:var(--wa-text);border-bottom-left-radius:2px;}
+.wa-ts{font-size:8.5px;color:rgba(255,255,255,.18);text-align:right;margin-top:1px;}
+.wa-ck{color:rgba(83,176,220,.5);}
+.typing{display:flex;gap:3px;padding:9px 12px;align-self:flex-start;background:var(--wa-panel);border-radius:7px;border-bottom-left-radius:2px;}
+.td{width:4px;height:4px;background:var(--wa-muted);border-radius:50%;animation:tB 1.4s infinite;}
+.td:nth-child(2){animation-delay:.15s;}.td:nth-child(3){animation-delay:.3s;}
+@keyframes tB{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-3px);}}
+
+/* Change Order Card */
+.coc{background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.05);border-radius:8px;padding:10px;margin-top:4px;}
+.coc-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.05);}
+.coc-title{font-weight:600;font-size:11.5px;color:var(--wa-text);}
+.coc-id{font-family:var(--mono);font-size:8px;color:var(--wa-teal);font-weight:400;letter-spacing:.5px;}
+.coc-project{font-size:9px;color:var(--wa-muted);margin-bottom:6px;}
+.coc-row{display:flex;justify-content:space-between;padding:2px 0;font-size:10.5px;}
+.coc-row-l{color:var(--wa-muted);}.coc-row-v{font-weight:600;color:var(--wa-text);font-variant-numeric:tabular-nums;}
+.coc-sep{height:1px;background:rgba(255,255,255,.05);margin:5px 0;}
+.coc-impact{display:flex;justify-content:space-between;padding:3px 0;font-size:10px;}
+.coc-impact-l{color:var(--wa-muted);}.coc-impact-v{font-weight:600;color:var(--wa-text);}
+.coc-impact.sched{color:var(--green);}
+.coc-items{font-size:9.5px;color:var(--wa-muted);margin:6px 0;padding:4px 0;border-top:1px solid rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.05);}
+.coc-item{padding:1px 0;}
+.coc-total{display:flex;justify-content:space-between;padding-top:5px;margin-top:4px;border-top:1px solid rgba(255,255,255,.07);font-weight:700;font-size:12px;color:var(--wa-text);}
+.coc-total span:last-child{color:var(--green);}
+.coc-meta{display:flex;gap:12px;margin-top:5px;font-size:8px;color:var(--wa-muted);font-family:var(--mono);letter-spacing:.3px;}
+.coc-btns{display:flex;gap:4px;margin-top:7px;}
+.coc-btn{padding:6px 11px;border-radius:6px;font-size:9.5px;font-weight:600;cursor:pointer;border:none;font-family:var(--body);transition:all .2s;}
+.coc-go{background:var(--green);color:var(--black);}.coc-go:hover{filter:brightness(1.1);}
+.coc-ed{background:rgba(255,255,255,.08);color:var(--wa-text);}.coc-ed:hover{background:rgba(255,255,255,.12);}
+
+/* Photo bubble — styled construction image */
+.photo-bubble{background:rgba(0,0,0,.5);border-radius:10px;padding:0;overflow:hidden;max-width:180px;display:inline-block;animation:mIn .3s cubic-bezier(.16,1,.3,1);}
+.photo-img{width:100%;height:140px;background:linear-gradient(135deg, #6d6d6d 0%, #4a4a4a 20%, #3a3a3a 40%, #5a5a5a 60%, #7a7a7a 100%);position:relative;display:flex;align-items:flex-end;justify-content:flex-end;overflow:hidden;}
+.photo-img::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(45deg, transparent 30%, rgba(200,100,50,.2) 50%, transparent 70%),linear-gradient(110deg, rgba(255,255,255,.1) 0%, transparent 30%, transparent 70%, rgba(0,0,0,.2) 100%);z-index:1;}
+.photo-img::after{content:'';position:absolute;width:100%;height:8px;background:linear-gradient(90deg, transparent 0%, rgba(100,50,20,.6) 35%, rgba(80,40,10,.7) 50%, rgba(60,30,0,.6) 65%, transparent 100%);top:50%;left:0;z-index:2;transform:scaleY(1.5);box-shadow:0 8px 12px rgba(0,0,0,.4);}
+.photo-text{padding:6px 8px;background:rgba(0,0,0,.6);font-size:9px;color:var(--wa-muted);white-space:nowrap;width:100%;border-top:1px solid rgba(255,255,255,.05);}
+
+/* Input */
+.wa-bar{padding:6px 9px;background:var(--wa-panel);display:flex;gap:6px;align-items:center;}
+.wa-inp{flex:1;padding:8px 13px;border-radius:18px;border:none;background:#2a3942;color:var(--wa-text);font-size:13px;font-family:var(--body);outline:none;}
+.wa-inp:focus{background:#2f4050;}
+.wa-inp::placeholder{color:var(--wa-muted);}
+.wa-send{width:32px;height:32px;border-radius:50%;background:var(--wa-teal);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .15s;flex-shrink:0;}
+.wa-send:hover{transform:scale(1.06);}
+.wa-send svg{fill:#fff;width:13px;height:13px;}
+
+/* Presets — 5 buttons */
+.presets{display:flex;flex-direction:column;align-items:center;gap:8px;}
+.preset-row{display:flex;gap:8px;justify-content:center;}
+.pill{
+  padding:10px 20px;border-radius:8px;
+  background:transparent;border:1px solid rgba(255,255,255,.35);
+  font-size:13px;font-weight:400;color:#ddd;
+  cursor:pointer;font-family:var(--body);transition:all .25s;
+  display:flex;align-items:center;gap:6px;
+}
+.pill:hover{border-color:rgba(255,255,255,.7);color:var(--white);background:rgba(255,255,255,.05);}
+.pill-emoji{font-size:15px;}
+
+/* Stats — matching pitch deck layout */
+.stats-section{max-width:1000px;margin:0 auto;padding:40px 48px;}
+.stats-frame{
+  border:1px solid var(--border);border-radius:12px;
+  padding:40px 48px;background:var(--surface);
+  display:flex;gap:0;
+}
+.stat-block{flex:1;text-align:center;}
+.stat-block+.stat-block{border-left:1px solid var(--border);}
+.stat-val{font-family:var(--heading);font-size:36px;font-weight:600;color:var(--white);letter-spacing:-.5px;}
+.stat-lbl{font-family:var(--mono);font-size:8px;font-weight:400;color:var(--dim);text-transform:uppercase;letter-spacing:2px;margin-top:6px;}
+.stat-desc{font-size:12px;font-weight:300;color:var(--gray);line-height:1.5;margin-top:8px;max-width:200px;margin-left:auto;margin-right:auto;}
+
+/* How */
+.how{max-width:680px;margin:0 auto;padding:40px 48px 48px;text-align:center;}
+.how h2{font-family:var(--heading);font-size:24px;font-weight:600;color:var(--white);margin-bottom:24px;}
+.how-steps{display:flex;flex-direction:column;gap:12px;text-align:left;}
+.how-step{display:flex;gap:12px;align-items:flex-start;}
+.how-num{font-family:var(--mono);font-size:9px;font-weight:400;color:var(--dim);width:18px;flex-shrink:0;padding-top:3px;}
+.how-txt{font-size:13px;font-weight:300;color:var(--gray);line-height:1.6;}
+.how-txt strong{font-weight:600;color:var(--white);}
+
+/* Showcase */
+.showcase{max-width:800px;margin:0 auto;padding:40px 48px 48px;}
+.showcase h2{font-family:var(--heading);font-size:22px;font-weight:600;color:var(--white);text-align:center;margin-bottom:8px;}
+.showcase-sub{font-size:14px;font-weight:300;color:var(--gray);text-align:center;margin-bottom:32px;line-height:1.6;}
+.showcase-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.sc-card{padding:20px;border:1px solid var(--border);border-radius:10px;background:var(--surface);transition:border-color .2s;display:flex;flex-direction:column;min-height:120px;}
+.sc-card:hover{border-color:rgba(255,255,255,.12);}
+.sc-emoji{font-size:20px;margin-bottom:10px;}
+.sc-title{font-family:var(--heading);font-size:13px;font-weight:600;color:var(--white);margin-bottom:4px;}
+.sc-desc{font-size:12px;font-weight:300;color:var(--gray);line-height:1.5;}
+@media(max-width:600px){.showcase-grid{grid-template-columns:1fr;}.showcase{padding:28px 24px 36px;}}
+
+/* Voice message bubble */
+.voice-bubble{display:flex;align-items:center;gap:8px;padding:4px 0;}
+.voice-play{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.voice-play svg{width:10px;height:10px;fill:var(--wa-text);}
+.voice-wave{flex:1;height:24px;display:flex;align-items:center;gap:1.5px;}
+.voice-bar{width:2.5px;border-radius:2px;background:rgba(255,255,255,.25);transition:height .15s;}
+.voice-bar.active{background:var(--wa-teal);}
+.voice-time{font-size:9px;color:var(--wa-muted);flex-shrink:0;width:28px;text-align:right;}
+.voice-transcript{margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.05);font-size:11px;color:var(--wa-muted);font-style:italic;}
+.voice-transcript strong{font-style:normal;color:var(--wa-text);font-weight:500;}
+
+/* Footer */
+.foot{padding:24px 48px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.foot-logo{font-family:var(--logo);font-size:15px;font-weight:600;color:var(--dim);text-decoration:none;display:flex;align-items:center;gap:5px;}
+.foot-d{width:3px;height:3px;border-radius:50%;background:var(--green);}
+.foot-link{font-family:var(--mono);font-size:8px;color:var(--dim);text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;}.foot-link:hover{color:var(--gray);}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);padding:9px 18px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--white);font-size:12px;font-weight:400;z-index:200;opacity:0;transition:all .3s;pointer-events:none;display:flex;align-items:center;gap:6px;}
+.toast-d{width:4px;height:4px;border-radius:50%;background:var(--green);flex-shrink:0;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+@media(max-width:900px){
+  .stats-frame{flex-direction:column;gap:20px;}
+  .stat-block+.stat-block{border-left:none;border-top:1px solid var(--border);padding-top:20px;}
+  .showcase-grid{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:700px){
+  .nav{padding:16px 20px;}
+  .nav-logo{font-size:18px;}
+  .nav-right{font-size:8px;letter-spacing:1.5px;}
+  .hero{padding:36px 20px 24px;max-width:100%;}
+  .hero h1{font-size:28px;letter-spacing:-0.8px;line-height:1.15;}
+  .hero p{font-size:14px;line-height:1.65;}
+  .demo{padding:0 16px 32px;gap:40px;}
+  .phone{width:100%;max-width:340px;height:auto;aspect-ratio:370/700;border-radius:36px;padding:8px;}
+  .phone-island{width:70px;height:20px;border-radius:11px;top:12px;}
+  .phone-screen{border-radius:30px;}
+  .wa-hdr{padding:42px 10px 8px;}
+  .wa-av{width:28px;height:28px;font-size:11px;}
+  .wa-name{font-size:13px;}
+  .wa-stat{font-size:9px;}
+  .wa-msgs{padding:8px 8px;}
+  .wa-m{font-size:12px;padding:5px 8px 3px;max-width:88%;}
+  .wa-bar{padding:5px 8px;}
+  .wa-inp{font-size:12px;padding:8px 12px;border-radius:16px;}
+  .wa-send{width:30px;height:30px;}
+  .wa-send svg{width:12px;height:12px;}
+  .coc{padding:10px;}
+  .coc-title{font-size:11px;}
+  .coc-row{font-size:10px;}
+  .coc-total{font-size:11px;}
+  .coc-btn{font-size:9px;padding:6px 10px;}
+  .presets{gap:8px;margin-top:8px;}
+  .preset-row{gap:6px;flex-wrap:wrap;}
+  .pill{padding:8px 14px;font-size:11px;border-radius:6px;}
+  .pill-emoji{font-size:13px;}
+  .stats-section{padding:24px 20px;}
+  .stats-frame{padding:24px 20px;}
+  .stat-val{font-size:28px;}
+  .stat-lbl{font-size:7px;letter-spacing:1.5px;}
+  .stat-desc{font-size:11px;margin-top:6px;}
+  .how{padding:24px 20px 32px;max-width:100%;}
+  .how h2{font-size:20px;margin-bottom:20px;}
+  .how-txt{font-size:12px;}
+  .showcase{padding:24px 20px 32px;}
+  .showcase h2{font-size:20px;}
+  .showcase-sub{font-size:13px;margin-bottom:24px;}
+  .showcase-grid{grid-template-columns:1fr;gap:10px;}
+  .sc-card{padding:16px;}
+  .sc-emoji{font-size:18px;margin-bottom:6px;}
+  .sc-title{font-size:12px;}
+  .sc-desc{font-size:11px;}
+  .foot{padding:16px 20px;}
+  .foot-logo{font-size:14px;}
+  .toast{font-size:11px;padding:8px 14px;bottom:16px;}
+}
+@media(max-width:380px){
+  .hero h1{font-size:24px;}
+  .hero p{font-size:13px;}
+  .phone{max-width:300px;}
+  .pill{padding:7px 12px;font-size:10px;}
+  .stat-val{font-size:24px;}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<nav class="nav">
+  <a href="https://roenai.com" class="nav-logo"><span class="nav-dot"></span>roen</a>
+  <span class="nav-right">Product Demo</span>
+</nav>
+
+<div class="hero">
+  <h1>Process change orders from the field</h1>
+  <p>Client wants to upgrade the finishes. Unforeseen site conditions. Scope creep. Open WhatsApp, describe the change, roen calculates cost impact, schedule impact, and drafts the CO for approval. Done before you leave site.</p>
+</div>
+
+<div class="demo">
+  <div class="phone">
+    <div class="phone-island"></div>
+    <div class="phone-screen">
+      <div class="wa-hdr">
+        <span class="wa-back">&lsaquo;</span>
+        <div class="wa-av">r</div>
+        <div class="wa-info">
+          <div class="wa-name">roen</div>
+          <div class="wa-stat" id="hdrStat"><span class="wa-sd"></span>online</div>
+        </div>
+      </div>
+      <div class="wa-msgs" id="msgs">
+        <div class="wa-date">Today</div>
+        <div class="wa-m wa-m-in">Hey 👋 Describe the change and I'll draft the CO for you.<div class="wa-ts">now</div></div>
+      </div>
+      <div class="wa-bar">
+        <input class="wa-inp" id="inp" placeholder="Describe the change..." onkeydown="if(event.key==='Enter')send()">
+        <button class="wa-send" onclick="send()"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+      </div>
+    </div>
+  </div>
+  <div class="presets">
+    <div class="preset-row">
+      <button class="pill" onclick="preset('upgrade')"><span class="pill-emoji">💰</span>Client upgrade</button>
+      <button class="pill" onclick="preset('voice')"><span class="pill-emoji">🎙️</span>Voice to CO</button>
+      <button class="pill" onclick="preset('addition')"><span class="pill-emoji">🏗️</span>Scope addition</button>
+    </div>
+    <div class="preset-row">
+      <button class="pill" onclick="preset('conditions')"><span class="pill-emoji">⚡</span>Site conditions</button>
+      <button class="pill" onclick="preset('design')"><span class="pill-emoji">📐</span>Design change</button>
+      <button class="pill" onclick="preset('photo')"><span class="pill-emoji">📸</span>Photo CO</button>
+    </div>
+  </div>
+</div>
+
+<div class="stats-section">
+  <div class="stats-frame">
+    <div class="stat-block"><div class="stat-val">&lt;45s</div><div class="stat-lbl">CO Draft Time</div><div class="stat-desc">From site message to formal change order with cost and schedule impacts. No spreadsheets, no email chains.</div></div>
+    <div class="stat-block"><div class="stat-val">97%</div><div class="stat-lbl">Cost Capture</div><div class="stat-desc">Change orders processed in real-time. No more missed back-charges or unbilled extras.</div></div>
+    <div class="stat-block"><div class="stat-val">2.8x</div><div class="stat-lbl">Faster Approval</div><div class="stat-desc">Compared to traditional paper-based CO workflows with email chains.</div></div>
+  </div>
+</div>
+
+<div class="how">
+  <h2>How it works</h2>
+  <div class="how-steps">
+    <div class="how-step"><div class="how-num">01</div><div class="how-txt"><strong>Describe the change</strong> — text or voice from site. What changed, why, and what's affected.</div></div>
+    <div class="how-step"><div class="how-num">02</div><div class="how-txt"><strong>AI calculates impact</strong> — cost delta, schedule impact, affected trades. Cross-references current contract and rates.</div></div>
+    <div class="how-step"><div class="how-num">03</div><div class="how-txt"><strong>Review the CO</strong> — formal change order with all fields. Cost breakdown, justification, approval chain.</div></div>
+    <div class="how-step"><div class="how-num">04</div><div class="how-txt"><strong>Route for approval</strong> — one tap to send to client/owner for signature. Logged against contract automatically.</div></div>
+  </div>
+</div>
+
+<div class="showcase">
+  <h2>What the agent can do</h2>
+  <p class="showcase-sub">@co agent processes changes from site, costs them instantly, and routes for approval.</p>
+  <div class="showcase-grid">
+    <div class="sc-card">
+      <div class="sc-emoji">📋</div>
+      <div class="sc-title">Draft CO from text</div>
+      <div class="sc-desc">Describe what changed. The agent formats it with cost impact, schedule delta, and justification.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">🎙️</div>
+      <div class="sc-title">Voice to change order</div>
+      <div class="sc-desc">Send a voice note from site. Transcribed, costed, and drafted automatically.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">💰</div>
+      <div class="sc-title">Real-time cost tracking</div>
+      <div class="sc-desc">Running total of all COs against original contract. Margin impact visible instantly.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">📊</div>
+      <div class="sc-title">Approval workflow</div>
+      <div class="sc-desc">Route to client, owner, or architect. Track who's approved, who's pending.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">🔗</div>
+      <div class="sc-title">Link to contract</div>
+      <div class="sc-desc">Every CO references the original contract clause and scope section.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">⏱️</div>
+      <div class="sc-title">Schedule impact</div>
+      <div class="sc-desc">AI calculates downstream schedule effects. "Adding powder room pushes completion 5 days."</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">📄</div>
+      <div class="sc-title">Export CO log</div>
+      <div class="sc-desc">Full change order register as PDF. Ready for project meetings or dispute resolution.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">🔔</div>
+      <div class="sc-title">Pending alerts</div>
+      <div class="sc-desc">"CO-034 awaiting client approval for 3 days — sending reminder."</div>
+    </div>
+  </div>
+</div>
+
+<footer class="foot">
+  <a href="https://roenai.com" class="foot-logo"><span class="foot-d"></span>roen</a>
+  <a href="https://roenai.com" class="foot-link">roenai.com</a>
+</footer>
+
+</div>
+<div class="toast" id="toast"><span class="toast-d"></span><span id="toastTxt"></span></div>
+
+<script>
+const M=document.getElementById('msgs'),I=document.getElementById('inp'),S=document.getElementById('hdrStat');
+let busy=false,userOwns=false,aT=[],gen=0;
+
+function ts(){const n=new Date;return n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0');}
+function msg(t,d){const e=document.createElement('div');e.className='wa-m wa-m-'+d;if(d==='in')e.style.maxWidth='92%';e.innerHTML=t+'<div class="wa-ts">'+ts()+(d==='out'?' <span class="wa-ck">✓✓</span>':'')+'</div>';M.appendChild(e);M.scrollTop=M.scrollHeight;}
+
+let typ=null;
+function showT(){S.innerHTML='<span class="wa-sd"></span>typing...';typ=document.createElement('div');typ.className='typing';typ.innerHTML='<div class="td"></div><div class="td"></div><div class="td"></div>';M.appendChild(typ);M.scrollTop=M.scrollHeight;}
+function hideT(){S.innerHTML='<span class="wa-sd"></span>online';if(typ){typ.remove();typ=null;}}
+function toast(m){const t=document.getElementById('toast');document.getElementById('toastTxt').textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+function photoMsgAnim(g,cb){
+  const e=document.createElement('div');e.className='wa-m wa-m-out';
+  e.innerHTML='<div class="photo-bubble"><div class="photo-img"></div><div class="photo-text">Construction photo</div></div><div class="wa-ts">'+ts()+' <span class="wa-ck">✓✓</span></div>';
+  M.appendChild(e);M.scrollTop=M.scrollHeight;
+  setTimeout(()=>{if(gen===g&&cb)cb();},400);
+}
+
+function voiceMsgAnim(dur,transcript,g,cb){
+  const e=document.createElement('div');e.className='wa-m wa-m-out';
+  const bars=Array.from({length:32},()=>4+Math.floor(Math.random()*16));
+  e.innerHTML='<div class="voice-bubble"><div class="voice-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div><div class="voice-wave">'+bars.map(h=>'<div class="voice-bar" style="height:'+h+'px"></div>').join('')+'</div><div class="voice-time">0:00</div></div><div class="wa-ts">'+ts()+' <span class="wa-ck">✓✓</span></div>';
+  M.appendChild(e);M.scrollTop=M.scrollHeight;
+  const barEls=e.querySelectorAll('.voice-bar'),timeEl=e.querySelector('.voice-time');
+  let ci=0;const step=Math.floor((dur*1000)/barEls.length);
+  const iv=setInterval(()=>{
+    if(gen!==g){clearInterval(iv);return;}
+    if(ci<barEls.length){barEls[ci].classList.add('active');timeEl.textContent='0:'+Math.floor((ci/barEls.length)*dur).toString().padStart(2,'0');ci++;}
+    else{clearInterval(iv);timeEl.textContent='0:'+dur.toString().padStart(2,'0');
+      if(transcript){const tr=document.createElement('div');tr.className='voice-transcript';tr.innerHTML='🎙️ <strong>Transcribed:</strong> '+transcript;e.insertBefore(tr,e.querySelector('.wa-ts'));M.scrollTop=M.scrollHeight;}
+      setTimeout(()=>{if(gen===g&&cb)cb();},400);}
+  },step);
+}
+
+let lastCO=null;
+function renderCO(d){
+  lastCO=d;
+  const e=document.createElement('div');e.className='wa-m wa-m-in';e.style.maxWidth='92%';
+  const tot=d.items.reduce((s,i)=>s+i.c,0);
+  const newTotal=d.original+tot;
+  const itemList=d.items.slice(0,3).map(i=>'<div class="coc-item">• '+i.n+': $'+i.c.toLocaleString()+'</div>').join('');
+  const more=d.items.length>3?'<div class="coc-item" style="font-style:italic;color:var(--wa-muted);">+ '+(d.items.length-3)+' items</div>':'';
+  e.innerHTML="Here's your change order 📋"+
+    '<div class="coc"><div class="coc-hdr"><span class="coc-title">'+d.t+'</span><span class="coc-id">'+d.id+'</span></div>'+
+    '<div class="coc-project">Project: '+d.proj+'</div>'+
+    '<div class="coc-row"><span class="coc-row-l">Original Contract</span><span class="coc-row-v">$'+d.original.toLocaleString()+'</span></div>'+
+    '<div class="coc-row"><span class="coc-row-l">CO Amount</span><span class="coc-row-v">$'+tot.toLocaleString()+'</span></div>'+
+    '<div class="coc-row"><span class="coc-row-l">New Contract Value</span><span class="coc-row-v">$'+newTotal.toLocaleString()+'</span></div>'+
+    '<div class="coc-sep"></div>'+
+    '<div class="coc-items">'+itemList+more+'</div>'+
+    '<div class="coc-impact"><span class="coc-impact-l">Schedule:</span><span class="coc-impact-v '+d.schedClass+'">'+d.sched+'</span></div>'+
+    '<div class="coc-impact"><span class="coc-impact-l">Margin:</span><span class="coc-impact-v">'+d.margin+'</span></div>'+
+    '<div class="coc-total"><span>CO Total</span><span>$'+tot.toLocaleString()+'</span></div>'+
+    '<div class="coc-btns"><button class="coc-btn coc-go" onclick="killAll();acceptCO(\''+d.id+'\')">✓ Send for approval</button><button class="coc-btn coc-ed" onclick="killAll();modifyCO()">Edit</button></div></div>'+
+    '<div class="wa-ts">'+ts()+'</div>';
+  M.appendChild(e);M.scrollTop=M.scrollHeight;
+}
+
+function acceptCO(id){
+  msg('Looks good, send for approval ✅','out');showT();
+  setTimeout(()=>{hideT();msg('Preparing CO document...','in');showT();
+    setTimeout(()=>{hideT();
+      const d=lastCO,tot=d?d.items.reduce((s,i)=>s+i.c,0):0;
+      const e=document.createElement('div');e.className='wa-m wa-m-in';e.style.maxWidth='92%';
+      e.innerHTML='Sent to client & owner ✅<div style="background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.05);border-radius:8px;padding:10px;margin-top:4px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.05);"><div style="width:28px;height:34px;background:rgba(255,255,255,.06);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;">📄</div><div><div style="font-size:11px;font-weight:600;color:var(--wa-text);">'+(d?d.id:'')+' — '+d.t+'.pdf</div><div style="font-size:9px;color:var(--wa-muted);">1 page • Change Order</div></div></div><div style="font-size:9.5px;color:var(--wa-muted);line-height:1.5;">CO amount: <strong style="color:var(--wa-text);">$'+tot.toLocaleString()+'</strong><br>Status: Awaiting signatures</div><div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-between;align-items:center;"><span style="font-family:var(--mono);font-size:8px;color:var(--green);letter-spacing:.5px;">SENT VIA EMAIL + WHATSAPP</span><span style="font-family:var(--logo);font-size:10px;color:var(--dim);">roen</span></div></div><div class="wa-ts">'+ts()+'</div>';
+      M.appendChild(e);M.scrollTop=M.scrollHeight;
+      setTimeout(()=>{msg('CO logged against '+d.proj+'. Will notify you when signatures received 👍','in');toast('Change order sent for approval');},800);
+    },1200);
+  },700);
+}
+function modifyCO(){msg('What would you like to adjust?','out');showT();setTimeout(()=>{hideT();msg('You can say "add extra labour", "remove foundation work", "increase schedule", etc 🔧','in');busy=false;},700);}
+
+const scripts={
+  upgrade:[
+    {d:'out',t:"Client wants to upgrade the finishes in the bathrooms"},
+    {d:'in',t:"Which bathrooms? And what upgrade — premium tiles, heated towel rails, etc? 💰"},
+    {d:'out',t:"Main ensuite. Premium Italian tiles instead of standard, plus spa bath"},
+    {d:'in',t:"How many sqm of tiling? And which spa — freestanding or built-in?"},
+    {d:'out',t:"8sqm, freestanding spa"},
+    {d:'in',t:"Got it — calculating cost delta and schedule... 🔍",delay:900},
+    {d:'co',data:{t:"Bathroom Finishes Upgrade",id:"CO-001",proj:"Waverly Street Reno",original:185000,items:[{n:"Premium Italian Tiles (8sqm) vs Standard",c:4200},{n:"Freestanding Spa (Reece) vs Standard Tub",c:3800},{n:"Heated Towel Rail",c:650},{n:"Additional Waterproofing",c:800}],sched:"+2 days",schedClass:"",margin:"25% → 23%"}}
+  ],
+  voice:[
+    {d:'voice',dur:8,transcript:"Yeah I'm at site, we've hit rock during excavation for the footings. Gonna need drilling and blasting, gonna cost more and take longer"},
+    {d:'in',t:"Got it 🎙️ Unforeseen rock during excavation. Need drilling & blasting. How much area affected?"},
+    {d:'out',t:"About 40% of the footing area, maybe 30sqm"},
+    {d:'in',t:"Checking with your excavation sub... they've quoted drilling & blasting at $185/sqm 🔍",delay:900},
+    {d:'co',data:{t:"Site Conditions — Rock Excavation",id:"CO-002",proj:"Thompson Avenue Extension",original:285000,items:[{n:"Rock Drilling & Blasting (30sqm @ $185/sqm)",c:5550},{n:"Blast mat & safety measures",c:1200},{n:"Additional site supervision",c:800}],sched:"+5 days",schedClass:"",margin:"24% → 22%"}}
+  ],
+  addition:[
+    {d:'out',t:"Client wants to add a powder room. Not in original scope"},
+    {d:'in',t:"Where in the house? And what fitout level? 🏗️"},
+    {d:'out',t:"Off the main hallway. Mid-range. Just basics"},
+    {d:'in',t:"Rough size? 2x1.5m okay?"},
+    {d:'out',t:"Yeah that works"},
+    {d:'in',t:"Let me cost the additions: plumbing, fixtures, tiling, electrical... ⏱",delay:900},
+    {d:'co',data:{t:"Scope Addition — Powder Room",id:"CO-003",proj:"Henderson Road Kitchen",original:156000,items:[{n:"Structural framing & lining",c:3200},{n:"Plumbing rough-in & trim",c:2100},{n:"Vanity & tapware",c:1800},{n:"Toilet & fittings",c:950},{n:"Tiling (3sqm)",c:1560},{n:"Electrical + lighting",c:1200},{n:"Paint & finishes",c:600}],sched:"+7 days",schedClass:"",margin:"26% → 24%"}}
+  ],
+  conditions:[
+    {d:'out',t:"Found asbestos in the walls during demo. Need to get it removed professionally"},
+    {d:'in',t:"Where in the property and how extensive? ⚡"},
+    {d:'out',t:"Master bedroom walls and some ceiling. Pretty widespread"},
+    {d:'in',t:"Getting quote from licensed asbestos removalist... safety protocols required 🔍",delay:900},
+    {d:'co',data:{t:"Site Conditions — Asbestos Removal",id:"CO-004",proj:"Collins Street Renovation",original:245000,items:[{n:"Licensed asbestos assessment",c:1200},{n:"Professional removal (estimated 400sqm)",c:8800},{n:"Safe disposal & certification",c:2000},{n:"Project delay contingency (1 week labour)",c:4500}],sched:"+8 days",schedClass:"",margin:"27% → 24%"}}
+  ],
+  design:[
+    {d:'out',t:"Architect revised the window sizes. Impacts framing, materials, and timeline"},
+    {d:'in',t:"How many windows and what's the size change? 📐"},
+    {d:'out',t:"3 windows, going from 1.5x1.8m to 1.2x2.2m. Looks like different head height too"},
+    {d:'in',t:"That changes the lintel specs and framing. Let me recalculate..."},
+    {d:'out',t:"Yeah, gonna be more complicated"},
+    {d:'in',t:"Running impact analysis against structural drawings... 🔍",delay:900},
+    {d:'co',data:{t:"Design Change — Window Specifications",id:"CO-005",proj:"Prospect Road New Build",original:520000,items:[{n:"New lintel sizing & engineering",c:2400},{n:"Revised head-of-wall framing",c:3100},{n:"Rework window rough openings",c:1800},{n:"Additional structural inspection",c:800},{n:"Reorder windows (lead time impact)",c:0}],sched:"+3 days",schedClass:"",margin:"25% → 24%"}}
+  ],
+  photo:[
+    {d:'photo',g:0},
+    {d:'in',t:"I can see exposed services behind that wall — looks like uncharted plumbing and electrical conduit. This wasn't on the demolition drawings. 🔍",delay:900},
+    {d:'in',t:"Want me to draft a change order? I'll need to add plumbing reroute and electrical relocation to the scope."},
+    {d:'out',t:"Yeah do it. Get Dave's plumbing rates and JM Electrical"},
+    {d:'in',t:"Pulling quotes and calculating CO now... 💰",delay:800},
+    {d:'co',data:{t:"Scope Addition — Hidden Services Rerouting",id:"CO-006",proj:"Main Street Renovation",original:310000,items:[{n:"Plumbing reroute (materials & labour)",c:3800},{n:"Electrical conduit relocation & testing",c:2400},{n:"Structural blocking for service runs",c:1200},{n:"Additional inspection & certification",c:600}],sched:"+4 days",schedClass:"",margin:"26% → 25%"}}
+  ]
+};
+
+// Typing animation for outgoing messages
+function typeAndSend(text,g,cb){
+  I.value='';let ci=0;const spd=25+Math.random()*15;
+  function go(){
+    if(gen!==g){I.value='';return;}
+    if(ci<text.length){I.value+=text[ci];ci++;I.scrollLeft=I.scrollWidth;setTimeout(go,spd+(Math.random()>.85?120:0));}
+    else setTimeout(()=>{if(gen!==g){I.value='';return;}I.value='';msg(text,'out');if(cb)cb();},300);
+  }
+  go();
+}
+
+function playScript(key,cb){
+  const steps=scripts[key];if(!steps)return;
+  let i=0;const g=gen;busy=true;
+  function next(){
+    if(gen!==g){busy=false;return;}
+    if(i>=steps.length){busy=false;if(cb)cb();return;}
+    const s=steps[i];i++;
+    if(s.d==='out'){
+      typeAndSend(s.t,g,()=>{if(gen===g)setTimeout(next,400);});
+    }else if(s.d==='in'){
+      showT();setTimeout(()=>{if(gen!==g){hideT();return;}hideT();msg(s.t,'in');setTimeout(next,s.delay||900);},700+Math.random()*500);
+    }else if(s.d==='co'){
+      showT();setTimeout(()=>{if(gen!==g){hideT();return;}hideT();renderCO(s.data);setTimeout(()=>{busy=false;if(gen===g&&cb)cb();},200);},1200);
+    }else if(s.d==='voice'){
+      voiceMsgAnim(s.dur||6,s.transcript,g,()=>{if(gen===g)setTimeout(next,400);});
+    }else if(s.d==='photo'){
+      photoMsgAnim(g,()=>{if(gen===g)setTimeout(next,400);});
+    }
+  }
+  next();
+}
+
+// Kill everything
+function killAll(){gen++;userOwns=true;aT.forEach(t=>clearTimeout(t));aT=[];busy=false;hideT();I.value='';chatState='idle';}
+
+// Smart user input
+const categories={
+  upgrade:{kw:['upgrade','premium','luxury','better','higher quality','finishes','tiles','fixtures','appliances'],ask:"Which areas? And what kind of upgrade — premium materials, high-end fixtures, etc? 💰"},
+  change:{kw:['change','modify','revise','different','revised','adjust','alter'],ask:"What's changing? Size, materials, layout, or specs? 📐"},
+  addition:{kw:['add','addition','extra','new room','extend scope','powder room','laundry','store'],ask:"Where in the project? What's the scope of the addition? 🏗️"},
+  conditions:{kw:['asbestos','rock','soil','contamination','unforeseen','condition','discovery','unexpected','issue','problem','finding'],ask:"How extensive? Where in the property? Need photos or measurements? ⚡"},
+  voice:{kw:[],ask:"Can you give more details? What's the scope, size, or location? 🎙️"},
+  general:{kw:[],ask:"Tell me more — what's changed or what needs to be added? 📝"}
+};
+function detectCat(t){const l=t.toLowerCase();for(const[c,v]of Object.entries(categories)){if(c==='general'||c==='voice')continue;if(v.kw.some(k=>l.includes(k)))return c;}return'general';}
+function genCO(cat,text){
+  const l=text.toLowerCase(),premium=l.includes('premium')||l.includes('luxury'),budget=l.includes('budget'),mult=premium?1.3:budget?.8:1;
+  const id='CO-'+Math.floor(Math.random()*1000).toString().padStart(3,'0');
+  const projects=['Main Project','Site A','Job Alpha','Phase 1','Contract 2024'];
+  const proj=projects[Math.floor(Math.random()*projects.length)];
+  const baseVal=150000+Math.random()*400000;
+
+  const T={
+    upgrade:{t:"Scope Upgrade",items:[{n:"Material upgrade premium option",c:4200},{n:"Additional finishes/detailing",c:2800},{n:"Installation & labour adjustment",c:1600}],sched:"+2 days",margin:"25% → 23%"},
+    change:{t:"Design Change",items:[{n:"Specification change — materials/sizing",c:3500},{n:"Rework drawings & engineering",c:2200},{n:"Labour adjustments",c:1100}],sched:"+3 days",margin:"25% → 24%"},
+    addition:{t:"Scope Addition",items:[{n:"New scope — materials & labour",c:8500},{n:"Coordination & sequencing impact",c:2200},{n:"Additional compliance inspections",c:600}],sched:"+5 days",margin:"26% → 24%"},
+    conditions:{t:"Site Conditions",items:[{n:"Unforeseen condition remediation",c:6800},{n:"Specialist sub-contract",c:3200},{n:"Delay mitigation & contingency",c:2100}],sched:"+6 days",margin:"27% → 24%"},
+    general:{t:"Change Order",items:[{n:"Scope change — labour & materials",c:4500},{n:"Schedule & coordination impact",c:1800},{n:"Contingency & management",c:900}],sched:"+3 days",margin:"25% → 23%"}
+  };
+  const tmpl=T[cat]||T.general;
+  const items=tmpl.items.map(i=>({n:i.n,c:Math.round(i.c*mult/100)*100}));
+  return{t:tmpl.t,id,proj,original:Math.round(baseVal),items,sched:tmpl.sched,schedClass:"",margin:tmpl.margin};
+}
+
+let chatState='idle',chatCat='general';
+
+function send(){
+  killAll();
+  const t=I.value.trim();if(!t)return;I.value='';msg(t,'out');
+  const l=t.toLowerCase();busy=true;
+  if(chatState==='idle'){
+    chatCat=detectCat(t);
+    if(t.length>80){showT();setTimeout(()=>{hideT();msg("Processing change... ✅",'in');showT();setTimeout(()=>{hideT();renderCO(genCO(chatCat,t));busy=false;chatState='idle';},1200);},700);}
+    else{chatState='asked';showT();setTimeout(()=>{hideT();msg(categories[chatCat].ask,'in');busy=false;},600);}
+  }else if(chatState==='asked'){
+    if(t.length>30||l.includes('yes')||l.includes('yeah')||l.includes('sqm')||l.includes('area')||l.match(/\d+/)){
+      chatState='idle';showT();const a=["Got it ✅","Calculating now 🔍","Drafting CO..."];
+      setTimeout(()=>{hideT();msg(a[Math.floor(Math.random()*a.length)],'in');showT();setTimeout(()=>{hideT();renderCO(genCO(chatCat,t));busy=false;},1200);},600);
+    }else{
+      const f={upgrade:"Premium or standard? Which areas? 💰",change:"New size/specs? How does it differ? 📐",addition:"How big? What rooms? 🏗️",conditions:"How extensive? Location? ⚡",general:"More details? Rough cost range? 📝"};
+      showT();setTimeout(()=>{hideT();msg(f[chatCat]||f.general,'in');busy=false;},600);
+    }
+  }else{
+    chatState='idle';chatCat=detectCat(t);
+    showT();setTimeout(()=>{hideT();msg("Updating CO... ✅",'in');showT();setTimeout(()=>{hideT();renderCO(genCO(chatCat,t));busy=false;},1200);},600);
+  }
+}
+
+function preset(k){
+  killAll();
+  resetChat();
+  userOwns=true;
+  const g=++gen;
+  setTimeout(()=>{if(gen===g)playScript(k);},300);
+}
+
+I.addEventListener('focus',killAll);
+
+function resetChat(){M.innerHTML='<div class="wa-date">Today</div><div class="wa-m wa-m-in">Hey 👋 Describe the change and I\'ll draft the CO for you.<div class="wa-ts">now</div></div>';}
+
+const keys=['upgrade','voice','addition','conditions','design','photo'];let li=0;
+function loop(){
+  if(userOwns)return;const g=gen;const k=keys[li%keys.length];li++;
+  playScript(k,()=>{if(gen!==g||userOwns)return;aT.push(setTimeout(()=>{if(gen!==g||userOwns)return;resetChat();aT.push(setTimeout(loop,600));},4000));});
+}
+aT.push(setTimeout(loop,1200));
+</script>
+</body>
+</html>

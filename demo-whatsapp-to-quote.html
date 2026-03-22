@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>roen — WhatsApp to Quote</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+@font-face {
+  font-family:'Cooper BT';
+  src:url('https://db.onlinewebfonts.com/t/2a88cde81e30e1095a498e3aa7ae3a0d.woff2') format('woff2');
+  font-weight:600; font-style:normal; font-display:swap;
+}
+:root{
+  --black:#0A0A0A;--white:#FFFFFF;--green:#00C853;
+  --gray:#8A8A8A;--surface:#141414;--border:#2A2A2A;--dim:#4a4a4a;
+  --logo:'Cooper BT',Georgia,serif;
+  --heading:'Open Sans',system-ui,sans-serif;
+  --body:'Open Sans',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',monospace;
+  --wa-bg:#0b141a;--wa-panel:#1f2c34;--wa-out:#005c4b;
+  --wa-text:#e9edef;--wa-muted:#8696a0;--wa-teal:#00a884;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{-webkit-font-smoothing:antialiased;}
+body{font-family:var(--body);background:var(--black);color:var(--white);min-height:100vh;overflow-x:hidden;}
+
+/* Atmospheric bg glow — matching pitch deck */
+body::before{
+  content:'';position:fixed;top:0;left:0;right:0;bottom:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(0,200,83,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at var(--gx,50%) var(--gy,40%), rgba(20,80,70,0.35) 0%, transparent 65%);
+  animation:glowDrift 12s ease-in-out infinite alternate;
+}
+@keyframes glowDrift{
+  0%{--gx:40%;--gy:35%;}
+  25%{--gx:55%;--gy:45%;}
+  50%{--gx:60%;--gy:30%;}
+  75%{--gx:45%;--gy:50%;}
+  100%{--gx:50%;--gy:35%;}
+}
+@property --gx{syntax:'<percentage>';inherits:false;initial-value:50%;}
+@property --gy{syntax:'<percentage>';inherits:false;initial-value:40%;}
+
+.page{position:relative;z-index:1;}
+
+/* Nav */
+.nav{padding:24px 48px;display:flex;justify-content:space-between;align-items:center;}
+.nav-logo{font-family:var(--logo);font-size:20px;font-weight:600;color:var(--white);text-decoration:none;display:flex;align-items:center;gap:7px;}
+.nav-dot{width:5px;height:5px;border-radius:50%;background:var(--green);}
+.nav-right{font-family:var(--mono);font-size:9px;font-weight:400;color:var(--dim);text-transform:uppercase;letter-spacing:2px;}
+
+/* Hero */
+.hero{text-align:center;padding:64px 48px 40px;max-width:720px;margin:0 auto;}
+.hero h1{
+  font-family:var(--heading);font-size:clamp(38px,5.5vw,60px);
+  font-weight:600;line-height:1.1;letter-spacing:-0.5px;margin-bottom:20px;
+}
+.hero p{font-size:15px;font-weight:300;color:var(--gray);line-height:1.75;max-width:500px;margin:0 auto;}
+
+/* Bordered card frame — pitch deck style */
+.frame{
+  max-width:1000px;margin:0 auto;
+  border:1px solid var(--border);border-radius:12px;
+  padding:48px;
+  background:var(--surface);
+}
+
+/* Demo layout */
+.demo{max-width:1080px;margin:0 auto;padding:0 48px 48px;display:flex;flex-direction:column;align-items:center;gap:36px;}
+
+/* Phone */
+.phone{width:370px;max-width:100%;height:700px;background:#000;border-radius:46px;padding:9px;position:relative;box-shadow:0 0 0 1px rgba(255,255,255,.04),0 50px 100px -20px rgba(0,0,0,.6);}
+.phone-island{width:86px;height:24px;background:#1a1a1a;border-radius:13px;position:absolute;top:15px;left:50%;transform:translateX(-50%);z-index:11;}
+.phone-screen{width:100%;height:100%;background:var(--wa-bg);border-radius:38px;overflow:hidden;display:flex;flex-direction:column;}
+
+/* WA chrome */
+.wa-hdr{background:var(--wa-panel);padding:50px 12px 9px;display:flex;align-items:center;gap:9px;}
+.wa-back{color:var(--wa-teal);font-size:17px;font-weight:300;}
+.wa-av{width:32px;height:32px;border-radius:50%;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-family:var(--logo);font-size:13px;font-weight:600;color:var(--white);}
+.wa-info{flex:1;}
+.wa-name{font-size:14px;font-weight:500;color:var(--wa-text);}
+.wa-stat{font-size:10px;color:var(--wa-teal);display:flex;align-items:center;gap:3px;}
+.wa-sd{width:3px;height:3px;border-radius:50%;background:var(--green);}
+
+.wa-msgs{flex:1;overflow-y:auto;padding:10px 9px;display:flex;flex-direction:column;gap:2px;scrollbar-width:none;}
+.wa-msgs::-webkit-scrollbar{display:none;}
+.wa-date{align-self:center;padding:3px 9px;border-radius:5px;background:rgba(255,255,255,.03);font-size:9.5px;color:var(--wa-muted);font-weight:500;margin:4px 0;}
+.wa-m{max-width:86%;padding:6px 9px 3px;border-radius:7px;font-size:12.5px;line-height:1.5;animation:mIn .3s cubic-bezier(.16,1,.3,1);}
+@keyframes mIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+.wa-m-out{align-self:flex-end;background:var(--wa-out);color:var(--wa-text);border-bottom-right-radius:2px;}
+.wa-m-in{align-self:flex-start;background:var(--wa-panel);color:var(--wa-text);border-bottom-left-radius:2px;}
+.wa-ts{font-size:8.5px;color:rgba(255,255,255,.18);text-align:right;margin-top:1px;}
+.wa-ck{color:rgba(83,176,220,.5);}
+.typing{display:flex;gap:3px;padding:9px 12px;align-self:flex-start;background:var(--wa-panel);border-radius:7px;border-bottom-left-radius:2px;}
+.td{width:4px;height:4px;background:var(--wa-muted);border-radius:50%;animation:tB 1.4s infinite;}
+.td:nth-child(2){animation-delay:.15s;}.td:nth-child(3){animation-delay:.3s;}
+@keyframes tB{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-3px);}}
+
+/* Quote card */
+.qc{background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.05);border-radius:8px;padding:10px;margin-top:4px;}
+.qc-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid rgba(255,255,255,.05);}
+.qc-title{font-weight:600;font-size:11.5px;color:var(--wa-text);}
+.qc-id{font-family:var(--mono);font-size:8px;color:var(--wa-teal);font-weight:400;letter-spacing:.5px;}
+.qc-row{display:flex;justify-content:space-between;padding:1.5px 0;font-size:10.5px;}
+.qc-row-l{color:var(--wa-muted);}.qc-row-v{font-weight:600;color:var(--wa-text);font-variant-numeric:tabular-nums;}
+.qc-sep{height:1px;background:rgba(255,255,255,.05);margin:4px 0;}
+.qc-total{display:flex;justify-content:space-between;padding-top:5px;margin-top:3px;border-top:1px solid rgba(255,255,255,.07);font-weight:700;font-size:12px;color:var(--wa-text);}
+.qc-total span:last-child{color:var(--green);}
+.qc-meta{display:flex;gap:12px;margin-top:5px;font-size:8px;color:var(--wa-muted);font-family:var(--mono);letter-spacing:.3px;}
+.qc-btns{display:flex;gap:4px;margin-top:7px;}
+.qc-btn{padding:6px 11px;border-radius:6px;font-size:9.5px;font-weight:600;cursor:pointer;border:none;font-family:var(--body);transition:all .2s;}
+.qc-go{background:var(--green);color:var(--black);}.qc-go:hover{filter:brightness(1.1);}
+.qc-ed{background:rgba(255,255,255,.08);color:var(--wa-text);}.qc-ed:hover{background:rgba(255,255,255,.12);}
+
+/* Input */
+.wa-bar{padding:6px 9px;background:var(--wa-panel);display:flex;gap:6px;align-items:center;}
+.wa-inp{flex:1;padding:8px 13px;border-radius:18px;border:none;background:#2a3942;color:var(--wa-text);font-size:13px;font-family:var(--body);outline:none;}
+.wa-inp:focus{background:#2f4050;}
+.wa-inp::placeholder{color:var(--wa-muted);}
+.wa-send{width:32px;height:32px;border-radius:50%;background:var(--wa-teal);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .15s;flex-shrink:0;}
+.wa-send:hover{transform:scale(1.06);}
+.wa-send svg{fill:#fff;width:13px;height:13px;}
+
+/* Presets — 3 top row, 2 bottom row, white outline */
+.presets{display:flex;flex-direction:column;align-items:center;gap:8px;}
+.preset-row{display:flex;gap:8px;justify-content:center;}
+.pill{
+  padding:10px 20px;border-radius:8px;
+  background:transparent;border:1px solid rgba(255,255,255,.35);
+  font-size:13px;font-weight:400;color:#ddd;
+  cursor:pointer;font-family:var(--body);transition:all .25s;
+  display:flex;align-items:center;gap:6px;
+}
+.pill:hover{border-color:rgba(255,255,255,.7);color:var(--white);background:rgba(255,255,255,.05);}
+.pill-emoji{font-size:15px;}
+
+/* Stats — matching pitch deck layout */
+.stats-section{max-width:1000px;margin:0 auto;padding:40px 48px;}
+.stats-frame{
+  border:1px solid var(--border);border-radius:12px;
+  padding:40px 48px;background:var(--surface);
+  display:flex;gap:0;
+}
+.stat-block{flex:1;text-align:center;}
+.stat-block+.stat-block{border-left:1px solid var(--border);}
+.stat-val{font-family:var(--heading);font-size:36px;font-weight:600;color:var(--white);letter-spacing:-.5px;}
+.stat-lbl{font-family:var(--mono);font-size:8px;font-weight:400;color:var(--dim);text-transform:uppercase;letter-spacing:2px;margin-top:6px;}
+.stat-desc{font-size:12px;font-weight:300;color:var(--gray);line-height:1.5;margin-top:8px;max-width:200px;margin-left:auto;margin-right:auto;}
+
+/* How */
+.how{max-width:680px;margin:0 auto;padding:40px 48px 48px;text-align:center;}
+.how h2{font-family:var(--heading);font-size:24px;font-weight:600;color:var(--white);margin-bottom:24px;}
+.how-steps{display:flex;flex-direction:column;gap:12px;text-align:left;}
+.how-step{display:flex;gap:12px;align-items:flex-start;}
+.how-num{font-family:var(--mono);font-size:9px;font-weight:400;color:var(--dim);width:18px;flex-shrink:0;padding-top:3px;}
+.how-txt{font-size:13px;font-weight:300;color:var(--gray);line-height:1.6;}
+.how-txt strong{font-weight:600;color:var(--white);}
+
+/* Showcase */
+.showcase{max-width:800px;margin:0 auto;padding:40px 48px 48px;}
+.showcase h2{font-family:var(--heading);font-size:22px;font-weight:600;color:var(--white);text-align:center;margin-bottom:8px;}
+.showcase-sub{font-size:14px;font-weight:300;color:var(--gray);text-align:center;margin-bottom:32px;line-height:1.6;}
+.showcase-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.sc-card{padding:20px;border:1px solid var(--border);border-radius:10px;background:var(--surface);transition:border-color .2s;display:flex;flex-direction:column;min-height:120px;}
+.sc-card:hover{border-color:rgba(255,255,255,.12);}
+.sc-emoji{font-size:20px;margin-bottom:10px;}
+.sc-title{font-family:var(--heading);font-size:13px;font-weight:600;color:var(--white);margin-bottom:4px;}
+.sc-desc{font-size:12px;font-weight:300;color:var(--gray);line-height:1.5;}
+@media(max-width:600px){.showcase-grid{grid-template-columns:1fr;}.showcase{padding:28px 24px 36px;}}
+
+/* Voice message bubble */
+.voice-bubble{display:flex;align-items:center;gap:8px;padding:4px 0;}
+.voice-play{width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.voice-play svg{width:10px;height:10px;fill:var(--wa-text);}
+.voice-wave{flex:1;height:24px;display:flex;align-items:center;gap:1.5px;}
+.voice-bar{width:2.5px;border-radius:2px;background:rgba(255,255,255,.25);transition:height .15s;}
+.voice-bar.active{background:var(--wa-teal);}
+.voice-time{font-size:9px;color:var(--wa-muted);flex-shrink:0;width:28px;text-align:right;}
+.voice-transcript{margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.05);font-size:11px;color:var(--wa-muted);font-style:italic;}
+.voice-transcript strong{font-style:normal;color:var(--wa-text);font-weight:500;}
+
+/* PDF preview in chat */
+.pdf-preview{background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:12px;margin-top:6px;}
+.pdf-hdr{display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.05);}
+.pdf-icon{width:28px;height:34px;background:rgba(255,255,255,.06);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
+.pdf-name{font-size:11px;font-weight:600;color:var(--wa-text);}
+.pdf-size{font-size:9px;color:var(--wa-muted);}
+.pdf-body{font-size:10px;color:var(--wa-muted);line-height:1.5;}
+.pdf-row{display:flex;justify-content:space-between;padding:1px 0;}
+.pdf-total{display:flex;justify-content:space-between;font-weight:700;font-size:11px;color:var(--wa-text);padding-top:4px;margin-top:4px;border-top:1px solid rgba(255,255,255,.06);}
+.pdf-footer{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-between;align-items:center;}
+.pdf-badge{font-family:var(--mono);font-size:8px;color:var(--green);letter-spacing:.5px;}
+.pdf-logo{font-family:var(--logo);font-size:10px;color:var(--dim);}
+
+/* Footer */
+.foot{padding:24px 48px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.foot-logo{font-family:var(--logo);font-size:15px;font-weight:600;color:var(--dim);text-decoration:none;display:flex;align-items:center;gap:5px;}
+.foot-d{width:3px;height:3px;border-radius:50%;background:var(--green);}
+.foot-link{font-family:var(--mono);font-size:8px;color:var(--dim);text-decoration:none;letter-spacing:1.5px;text-transform:uppercase;}.foot-link:hover{color:var(--gray);}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);padding:9px 18px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--white);font-size:12px;font-weight:400;z-index:200;opacity:0;transition:all .3s;pointer-events:none;display:flex;align-items:center;gap:6px;}
+.toast-d{width:4px;height:4px;border-radius:50%;background:var(--green);flex-shrink:0;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+@media(max-width:900px){
+  .stats-frame{flex-direction:column;gap:20px;}
+  .stat-block+.stat-block{border-left:none;border-top:1px solid var(--border);padding-top:20px;}
+  .showcase-grid{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:700px){
+  .nav{padding:16px 20px;}
+  .nav-logo{font-size:18px;}
+  .nav-right{font-size:8px;letter-spacing:1.5px;}
+  .hero{padding:36px 20px 24px;max-width:100%;}
+  .hero h1{font-size:28px;letter-spacing:-0.8px;line-height:1.15;}
+  .hero p{font-size:14px;line-height:1.65;}
+  .demo{padding:0 16px 32px;gap:40px;}
+  .phone{width:100%;max-width:340px;height:auto;aspect-ratio:370/700;border-radius:36px;padding:8px;}
+  .phone-island{width:70px;height:20px;border-radius:11px;top:12px;}
+  .phone-screen{border-radius:30px;}
+  .wa-hdr{padding:42px 10px 8px;}
+  .wa-av{width:28px;height:28px;font-size:11px;}
+  .wa-name{font-size:13px;}
+  .wa-stat{font-size:9px;}
+  .wa-msgs{padding:8px 8px;}
+  .wa-m{font-size:12px;padding:5px 8px 3px;max-width:88%;}
+  .wa-bar{padding:5px 8px;}
+  .wa-inp{font-size:12px;padding:8px 12px;border-radius:16px;}
+  .wa-send{width:30px;height:30px;}
+  .wa-send svg{width:12px;height:12px;}
+  .qc{padding:10px;}
+  .qc-title{font-size:11px;}
+  .qc-row{font-size:10px;}
+  .qc-total{font-size:11px;}
+  .qc-btn{font-size:9px;padding:6px 10px;}
+  .presets{gap:8px;margin-top:8px;}
+  .preset-row{gap:6px;flex-wrap:wrap;}
+  .pill{padding:8px 14px;font-size:11px;border-radius:6px;}
+  .pill-emoji{font-size:13px;}
+  .stats-section{padding:24px 20px;}
+  .stats-frame{padding:24px 20px;}
+  .stat-val{font-size:28px;}
+  .stat-lbl{font-size:7px;letter-spacing:1.5px;}
+  .stat-desc{font-size:11px;margin-top:6px;}
+  .how{padding:24px 20px 32px;max-width:100%;}
+  .how h2{font-size:20px;margin-bottom:20px;}
+  .how-txt{font-size:12px;}
+  .showcase{padding:24px 20px 32px;}
+  .showcase h2{font-size:20px;}
+  .showcase-sub{font-size:13px;margin-bottom:24px;}
+  .showcase-grid{grid-template-columns:1fr;gap:10px;}
+  .sc-card{padding:16px;}
+  .sc-emoji{font-size:18px;margin-bottom:6px;}
+  .sc-title{font-size:12px;}
+  .sc-desc{font-size:11px;}
+  .foot{padding:16px 20px;}
+  .foot-logo{font-size:14px;}
+  .toast{font-size:11px;padding:8px 14px;bottom:16px;}
+}
+@media(max-width:380px){
+  .hero h1{font-size:24px;}
+  .hero p{font-size:13px;}
+  .phone{max-width:300px;}
+  .pill{padding:7px 12px;font-size:10px;}
+  .stat-val{font-size:24px;}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<nav class="nav">
+  <a href="https://roenai.com" class="nav-logo"><span class="nav-dot"></span>roen</a>
+  <span class="nav-right">Product Demo</span>
+</nav>
+
+<div class="hero">
+  <h1>Quote from the job site on WhatsApp</h1>
+  <p>You're on site, the client calls, they want a price. Open WhatsApp, describe the job, roen sends back an itemised quote in seconds. No laptop, no spreadsheet. The app you already know.</p>
+</div>
+
+<div class="demo">
+  <div class="phone">
+    <div class="phone-island"></div>
+    <div class="phone-screen">
+      <div class="wa-hdr">
+        <span class="wa-back">&lsaquo;</span>
+        <div class="wa-av">r</div>
+        <div class="wa-info">
+          <div class="wa-name">roen</div>
+          <div class="wa-stat" id="hdrStat"><span class="wa-sd"></span>online</div>
+        </div>
+      </div>
+      <div class="wa-msgs" id="msgs">
+        <div class="wa-date">Today</div>
+        <div class="wa-m wa-m-in">Hey 👋 Describe the job and I'll price it for you.<div class="wa-ts">now</div></div>
+      </div>
+      <div class="wa-bar">
+        <input class="wa-inp" id="inp" placeholder="Describe any job..." onkeydown="if(event.key==='Enter')send()">
+        <button class="wa-send" onclick="send()"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+      </div>
+    </div>
+  </div>
+  <div class="presets">
+    <div class="preset-row">
+      <button class="pill" onclick="preset('bathroom')"><span class="pill-emoji">🚿</span>Bathroom reno</button>
+      <button class="pill" onclick="preset('voice')"><span class="pill-emoji">🎙️</span>Voice to quote</button>
+      <button class="pill" onclick="preset('extension')"><span class="pill-emoji">🏠</span>House extension</button>
+    </div>
+    <div class="preset-row">
+      <button class="pill" onclick="preset('office')"><span class="pill-emoji">🏢</span>Office fit-out</button>
+      <button class="pill" onclick="preset('roof')"><span class="pill-emoji">🔨</span>Roof replacement</button>
+    </div>
+  </div>
+</div>
+
+<div class="stats-section">
+  <div class="stats-frame">
+    <div class="stat-block"><div class="stat-val">&lt;12s</div><div class="stat-lbl">Quote Time</div><div class="stat-desc">From message to itemised quote, including supplier rate cross-referencing and labour costing.</div></div>
+    <div class="stat-block"><div class="stat-val">94%</div><div class="stat-lbl">Accuracy</div><div class="stat-desc">AI-generated estimates within 6% of final project cost on average across all trades.</div></div>
+    <div class="stat-block"><div class="stat-val">3.2x</div><div class="stat-lbl">Throughput</div><div class="stat-desc">More quotes per day compared to traditional spreadsheet-based estimating workflows.</div></div>
+  </div>
+</div>
+
+<div class="how">
+  <h2>How it works</h2>
+  <div class="how-steps">
+    <div class="how-step"><div class="how-num">01</div><div class="how-txt"><strong>Message the agent</strong> — describe the job in plain language, like you're texting a colleague on site.</div></div>
+    <div class="how-step"><div class="how-num">02</div><div class="how-txt"><strong>AI breaks it down</strong> — extracts scope, quantities, materials and labour. Cross-references current supplier rates and historical data.</div></div>
+    <div class="how-step"><div class="how-num">03</div><div class="how-txt"><strong>Receive an itemised quote</strong> — line-by-line with totals, GST, timeline and target margin. Under 15 seconds.</div></div>
+    <div class="how-step"><div class="how-num">04</div><div class="how-txt"><strong>Accept and send</strong> — one tap to send to client and log in the roen pipeline automatically.</div></div>
+  </div>
+</div>
+
+<div class="showcase">
+  <h2>What the agent can do</h2>
+  <p class="showcase-sub">@quoteagent uses your pricing data, supplier relationships, and job history.</p>
+  <div class="showcase-grid">
+    <div class="sc-card">
+      <div class="sc-emoji">📋</div>
+      <div class="sc-title">Quote any job from a text</div>
+      <div class="sc-desc">Describe the work in plain language. The agent extracts scope, quantities, and trades — returns an itemised quote.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">💰</div>
+      <div class="sc-title">Compare supplier pricing</div>
+      <div class="sc-desc">Ask for pricing on specific materials. The agent checks your preferred suppliers and returns a comparison with delivery times.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">🔁</div>
+      <div class="sc-title">Reuse past job pricing</div>
+      <div class="sc-desc">The agent remembers your past quotes. "Use the same rates as the Waverly St job" — done.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">🏗️</div>
+      <div class="sc-title">Lock in your subs</div>
+      <div class="sc-desc">The agent knows your subcontractors and their rates. "Use JM Electrical again" — confirmed and priced.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">📊</div>
+      <div class="sc-title">Track rate changes</div>
+      <div class="sc-desc">Supplier price increases flagged automatically. "Bluescope bumped colorbond 4% — already updated."</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">🎙️</div>
+      <div class="sc-title">Voice to quote</div>
+      <div class="sc-desc">Send a voice note from site. The agent transcribes it, extracts the scope, and builds the quote — hands-free.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">📄</div>
+      <div class="sc-title">Send to client as PDF</div>
+      <div class="sc-desc">Accept and a branded PDF is generated and sent to the client via email and WhatsApp. Job logged in pipeline.</div>
+    </div>
+    <div class="sc-card">
+      <div class="sc-emoji">📅</div>
+      <div class="sc-title">Check trade availability</div>
+      <div class="sc-desc">The agent checks your subcontractors' schedules. "Dave the plumber's free week of the 14th."</div>
+    </div>
+  </div>
+</div>
+
+<footer class="foot">
+  <a href="https://roenai.com" class="foot-logo"><span class="foot-d"></span>roen</a>
+  <a href="https://roenai.com" class="foot-link">roenai.com</a>
+</footer>
+
+</div>
+<div class="toast" id="toast"><span class="toast-d"></span><span id="toastTxt"></span></div>
+
+<script>
+const M=document.getElementById('msgs'),I=document.getElementById('inp'),S=document.getElementById('hdrStat');
+let busy=false,userOwns=false,aT=[],gen=0;
+
+function ts(){const n=new Date;return n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0');}
+function msg(t,d){const e=document.createElement('div');e.className='wa-m wa-m-'+d;if(d==='in')e.style.maxWidth='92%';e.innerHTML=t+'<div class="wa-ts">'+ts()+(d==='out'?' <span class="wa-ck">✓✓</span>':'')+'</div>';M.appendChild(e);M.scrollTop=M.scrollHeight;}
+
+let typ=null;
+function showT(){S.innerHTML='<span class="wa-sd"></span>typing...';typ=document.createElement('div');typ.className='typing';typ.innerHTML='<div class="td"></div><div class="td"></div><div class="td"></div>';M.appendChild(typ);M.scrollTop=M.scrollHeight;}
+function hideT(){S.innerHTML='<span class="wa-sd"></span>online';if(typ){typ.remove();typ=null;}}
+function toast(m){const t=document.getElementById('toast');document.getElementById('toastTxt').textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+function voiceMsgAnim(dur,transcript,g,cb){
+  const e=document.createElement('div');e.className='wa-m wa-m-out';
+  const bars=Array.from({length:32},()=>4+Math.floor(Math.random()*16));
+  e.innerHTML='<div class="voice-bubble"><div class="voice-play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div><div class="voice-wave">'+bars.map(h=>'<div class="voice-bar" style="height:'+h+'px"></div>').join('')+'</div><div class="voice-time">0:00</div></div><div class="wa-ts">'+ts()+' <span class="wa-ck">✓✓</span></div>';
+  M.appendChild(e);M.scrollTop=M.scrollHeight;
+  const barEls=e.querySelectorAll('.voice-bar'),timeEl=e.querySelector('.voice-time');
+  let ci=0;const step=Math.floor((dur*1000)/barEls.length);
+  const iv=setInterval(()=>{
+    if(gen!==g){clearInterval(iv);return;}
+    if(ci<barEls.length){barEls[ci].classList.add('active');timeEl.textContent='0:'+Math.floor((ci/barEls.length)*dur).toString().padStart(2,'0');ci++;}
+    else{clearInterval(iv);timeEl.textContent='0:'+dur.toString().padStart(2,'0');
+      if(transcript){const tr=document.createElement('div');tr.className='voice-transcript';tr.innerHTML='🎙️ <strong>Transcribed:</strong> '+transcript;e.insertBefore(tr,e.querySelector('.wa-ts'));M.scrollTop=M.scrollHeight;}
+      setTimeout(()=>{if(gen===g&&cb)cb();},400);}
+  },step);
+}
+
+let lastQuote=null;
+function renderQuote(d){
+  lastQuote=d;
+  const e=document.createElement('div');e.className='wa-m wa-m-in';e.style.maxWidth='92%';
+  const tot=d.items.reduce((s,i)=>s+i.c,0),gst=Math.round(tot*.1);
+  const rows=d.items.map(i=>'<div class="qc-row"><span class="qc-row-l">'+i.n+'</span><span class="qc-row-v">$'+i.c.toLocaleString()+'</span></div>').join('');
+  e.innerHTML="Here's your quote 📋"+
+    '<div class="qc"><div class="qc-hdr"><span class="qc-title">'+d.t+'</span><span class="qc-id">'+d.id+'</span></div>'+rows+
+    '<div class="qc-sep"></div>'+
+    '<div class="qc-row"><span class="qc-row-l">Subtotal</span><span class="qc-row-v">$'+tot.toLocaleString()+'</span></div>'+
+    '<div class="qc-row"><span class="qc-row-l">GST (10%)</span><span class="qc-row-v">$'+gst.toLocaleString()+'</span></div>'+
+    '<div class="qc-total"><span>Total inc. GST</span><span>$'+(tot+gst).toLocaleString()+'</span></div>'+
+    '<div class="qc-meta"><span>⏱ '+d.time+'</span><span>📊 MARGIN: '+d.margin+'</span></div>'+
+    '<div class="qc-btns"><button class="qc-btn qc-go" onclick="killAll();acceptQ(\''+d.id+'\')">✓ Accept & send</button><button class="qc-btn qc-ed" onclick="killAll();modifyQ()">Modify</button></div></div>'+
+    '<div class="wa-ts">'+ts()+'</div>';
+  M.appendChild(e);M.scrollTop=M.scrollHeight;
+}
+
+function acceptQ(id){
+  msg('Looks good, send it ✅','out');showT();
+  setTimeout(()=>{hideT();msg('Generating PDF quote...','in');showT();
+    setTimeout(()=>{hideT();
+      const d=lastQuote,tot=d?d.items.reduce((s,i)=>s+i.c,0):0,gst=Math.round(tot*.1);
+      const pdfRows=d?d.items.slice(0,5).map(i=>'<div class="pdf-row"><span>'+i.n+'</span><span>$'+i.c.toLocaleString()+'</span></div>').join(''):'';
+      const more=d&&d.items.length>5?'<div style="font-size:9px;color:var(--wa-muted);padding:2px 0">+ '+(d.items.length-5)+' more items</div>':'';
+      const e=document.createElement('div');e.className='wa-m wa-m-in';e.style.maxWidth='92%';
+      e.innerHTML='Sent to client ✅<div class="pdf-preview"><div class="pdf-hdr"><div class="pdf-icon">📄</div><div><div class="pdf-name">'+(d?d.t:'Quote')+' — '+id+'.pdf</div><div class="pdf-size">2 pages • '+(d?d.time:'')+'</div></div></div><div class="pdf-body">'+pdfRows+more+'<div class="pdf-total"><span>Total inc. GST</span><span>$'+(tot+gst).toLocaleString()+'</span></div></div><div class="pdf-footer"><span class="pdf-badge">SENT VIA EMAIL + WHATSAPP</span><span class="pdf-logo">roen</span></div></div><div class="wa-ts">'+ts()+'</div>';
+      M.appendChild(e);M.scrollTop=M.scrollHeight;
+      setTimeout(()=>{msg('Project logged in pipeline. Client has 7 days to accept. I\'ll follow up automatically if no response 👍','in');toast('Quote sent — logged in pipeline');},800);
+    },1200);
+  },700);
+}
+function modifyQ(){msg('Can we adjust a few items?','out');showT();setTimeout(()=>{hideT();msg('Sure thing — which items? You can say stuff like "swap to premium tiles", "remove the towel rail", or "add underfloor heating" 🔧','in');busy=false;},700);}
+
+const scripts={
+  bathroom:[
+    {d:'out',t:"Need a price on a bathroom reno"},
+    {d:'in',t:"Hey 👋 How big and what finish level?"},
+    {d:'out',t:"8sqm, mid-range"},
+    {d:'in',t:"Use same pricing as the Waverly St job? ABC Tiling at $52/sqm, Reece trade for fixtures?"},
+    {d:'out',t:"Yeah. Freestanding bath, frameless screen, heated towel rail"},
+    {d:'in',t:"Done — Dave the plumber's free week of the 14th too 🔍",delay:900},
+    {d:'quote',data:{t:"Bathroom Renovation",id:"Q-1848",items:[{n:"Demo & strip-out",c:2800},{n:"Waterproofing",c:1900},{n:"Tiling — ABC Tiling",c:4200},{n:"Plumbing — Dave K.",c:3800},{n:"Freestanding bath (Reece)",c:3200},{n:"Frameless screen",c:2400},{n:"Vanity + tapware (Reece)",c:1800},{n:"Heated towel rail",c:650},{n:"Electrical",c:1400},{n:"Paint & finish",c:900}],time:"3-4 WKS",margin:"28%"}}
+  ],
+  pricing:[
+    {d:'out',t:"Can you get me pricing on engineered timber? Need 45sqm"},
+    {d:'in',t:"On it 🔍 Checking your 3 preferred suppliers..."},
+    {d:'in',t:"Got them back:<br><br><strong>Carpet Court</strong> — Hybrid Oak 180mm — $62/sqm<br><strong>Floor Warehouse</strong> — Spotted Gum 130mm — $78/sqm<br><strong>ABC Flooring</strong> — Blackbutt 185mm — $71/sqm<br><br>Carpet Court is cheapest but ABC has better stock — 3 day delivery vs 2 weeks"},
+    {d:'out',t:"Go with ABC, the Blackbutt. Same as the Mitchell Park job"},
+    {d:'in',t:"Locked in — ABC Flooring, Blackbutt 185mm, $71/sqm for 45sqm. Want me to add it to an open quote or start a new one?"},
+    {d:'out',t:"Add it to Q-1852 for the Henley Beach reno"},
+    {d:'in',t:"Updated Q-1852. Flooring line added — $3,195 + install ✅",delay:600},
+  ],
+  extension:[
+    {d:'out',t:"Need a quote on a rear extension"},
+    {d:'in',t:"How big and what cladding? 🏠"},
+    {d:'out',t:"6x4m, brick veneer to match"},
+    {d:'in',t:"Use Consolidated Steel again? Same rate as the Thompson job — $185/lm"},
+    {d:'out',t:"Yeah. Open plan kitchen, bi-folds, timber floor"},
+    {d:'in',t:"Stegbar bi-folds with your 12% trade discount. One sec 🔨",delay:900},
+    {d:'quote',data:{t:"Rear Extension (24sqm)",id:"Q-1849",items:[{n:"Footings & slab",c:20500},{n:"Steel — Consolidated",c:14000},{n:"Brick veneer",c:11000},{n:"Roofing",c:6500},{n:"Bi-folds — Stegbar",c:5800},{n:"Electrical",c:4200},{n:"Plumbing",c:3800},{n:"Timber flooring",c:4800},{n:"Paint & finish",c:3600}],time:"10-12 WKS",margin:"24%"}}
+  ],
+  suppliers:[
+    {d:'out',t:"What's the best price on a 20mm Caesarstone benchtop? Need 4.2 linear metres"},
+    {d:'in',t:"Checking your stone fabricators now... 🔍"},
+    {d:'in',t:"Three quotes back:<br><br><strong>Stone & Tile Co</strong> — Statuario Maximus 20mm — $680/lm installed<br><strong>QuantumQuartz (via ProTrade)</strong> — Calacatta 20mm — $620/lm installed<br><strong>Caesarstone direct</strong> — Fresh Concrete 20mm — $590/lm installed<br><br>ProTrade rate includes your 15% trade account discount"},
+    {d:'out',t:"Go with ProTrade, the Calacatta. Can they template next week?"},
+    {d:'in',t:"Checking availability... ProTrade confirmed — template Thursday, install following Monday. $2,604 total for 4.2lm ✅"},
+    {d:'out',t:"Perfect. Add it to the Prospect Rd kitchen"},
+    {d:'in',t:"Done — added to Q-1853. Updated total is $38,450 inc GST 📋",delay:600},
+  ],
+  office:[
+    {d:'out',t:"Got a 200sqm office fit-out"},
+    {d:'in',t:"Full fit-out or refurb? 🏢"},
+    {d:'out',t:"Full from base build. 4 offices, boardroom, server room, the works"},
+    {d:'in',t:"Use JM Electrical again? They were $18K on Collins St and came in on time"},
+    {d:'out',t:"Yeah them. Plus kitchenette and reception"},
+    {d:'in',t:"JM Electrical + Cooltech HVAC locked in. Workspace joinery updated rates Tuesday 📊",delay:900},
+    {d:'quote',data:{t:"Office Fit-Out (200sqm)",id:"Q-1850",items:[{n:"Offices x4 — Workspace",c:28000},{n:"Open plan",c:12000},{n:"Boardroom + AV",c:15000},{n:"Kitchenette",c:9500},{n:"Server room",c:8000},{n:"Reception",c:6500},{n:"Cat6 — JM Electrical",c:11000},{n:"Electrical — JM Electrical",c:18000},{n:"HVAC — Cooltech",c:14000},{n:"Flooring + paint",c:16000}],time:"8-10 WKS",margin:"26%"}}
+  ],
+  roof:[
+    {d:'out',t:"Full roof replacement"},
+    {d:'in',t:"What's the area and what's on there now? 🔨"},
+    {d:'out',t:"180sqm, terracotta. Want colorbond"},
+    {d:'in',t:"Heads up — Bluescope bumped pricing 4% last week. Already updated. Same Surfmist as Henderson Rd?"},
+    {d:'out',t:"Yeah. New gutters and R4.0 insulation too"},
+    {d:'in',t:"Pete's scaffolding + Insulation Direct for batts — $2/sqm cheaper than Bradford 🔍",delay:900},
+    {d:'quote',data:{t:"Roof Replacement (180sqm)",id:"Q-1851",items:[{n:"Scaffolding — Pete M.",c:4200},{n:"Remove terracotta",c:5500},{n:"Battens",c:3800},{n:"Colorbond Surfmist",c:16000},{n:"Ridge & flashing",c:2800},{n:"Gutters & downpipes",c:4500},{n:"R4.0 — Insulation Direct",c:3600},{n:"Clean-up",c:1800}],time:"5-7 DAYS",margin:"30%"}}
+  ],
+  voice:[
+    {d:'voice',dur:7,transcript:"Yeah I'm at Henderson Rd, client wants a deck out the back. About 20sqm merbau, needs stairs down to the yard, steel frame cos of the slope"},
+    {d:'in',t:"Got it 🎙️ Deck — 20sqm merbau, steel frame, stairs. Balustrade needed? And should I use TopDeck Timber at $88/lm like last time?"},
+    {d:'out',t:"Yeah glass balustrade. And yes TopDeck"},
+    {d:'in',t:"TopDeck + your steel fab Marco locked in 🔍",delay:900},
+    {d:'quote',data:{t:"Merbau Deck (20sqm)",id:"Q-1855",items:[{n:"Steel subframe — Marco",c:6200},{n:"Merbau — TopDeck Timber",c:7800},{n:"Bearers & joists",c:3400},{n:"Stairs (8 treads)",c:2800},{n:"Glass balustrade",c:4500},{n:"Hardware + fixings",c:950},{n:"Oil & seal",c:800},{n:"Clean-up",c:450}],time:"2-3 WKS",margin:"30%"}}
+  ]
+};
+
+// Typing animation for outgoing messages
+function typeAndSend(text,g,cb){
+  I.value='';let ci=0;const spd=25+Math.random()*15;
+  function go(){
+    if(gen!==g){I.value='';return;}
+    if(ci<text.length){I.value+=text[ci];ci++;I.scrollLeft=I.scrollWidth;setTimeout(go,spd+(Math.random()>.85?120:0));}
+    else setTimeout(()=>{if(gen!==g){I.value='';return;}I.value='';msg(text,'out');if(cb)cb();},300);
+  }
+  go();
+}
+
+function playScript(key,cb){
+  const steps=scripts[key];if(!steps)return;
+  let i=0;const g=gen;busy=true;
+  function next(){
+    if(gen!==g){busy=false;return;}
+    if(i>=steps.length){busy=false;if(cb)cb();return;}
+    const s=steps[i];i++;
+    if(s.d==='out'){
+      typeAndSend(s.t,g,()=>{if(gen===g)setTimeout(next,400);});
+    }else if(s.d==='in'){
+      showT();setTimeout(()=>{if(gen!==g){hideT();return;}hideT();msg(s.t,'in');setTimeout(next,s.delay||900);},700+Math.random()*500);
+    }else if(s.d==='quote'){
+      showT();setTimeout(()=>{if(gen!==g){hideT();return;}hideT();renderQuote(s.data);setTimeout(()=>{busy=false;if(gen===g&&cb)cb();},200);},1200);
+    }else if(s.d==='voice'){
+      voiceMsgAnim(s.dur||6,s.transcript,g,()=>{if(gen===g)setTimeout(next,400);});
+    }
+  }
+  next();
+}
+
+// Kill everything
+function killAll(){gen++;userOwns=true;aT.forEach(t=>clearTimeout(t));aT=[];busy=false;hideT();I.value='';chatState='idle';}
+
+// Smart user input
+const categories={
+  bathroom:{kw:['bath','shower','ensuite','toilet','vanity','wet room','laundry'],ask:"How big is the space roughly? And what finish level — budget, mid-range, or premium? 🚿"},
+  kitchen:{kw:['kitchen','cook','benchtop','splashback','cabinetry'],ask:"Nice — how big is the kitchen? And are we talking a full gut or a facelift? 🍳"},
+  deck:{kw:['deck','patio','pergola','outdoor','verandah','alfresco'],ask:"Sounds good 👍 How big roughly? And what material — hardwood, treated pine, or composite?"},
+  extension:{kw:['extension','extend','addition','granny','extra room'],ask:"No worries 🏠 How big? Single or double storey? What cladding?"},
+  office:{kw:['office','commercial','fit-out','fitout','retail','shop','warehouse'],ask:"Good scope 🏢 How big (sqm)? Full fit-out or refurb?"},
+  roof:{kw:['roof','colorbond','gutter','tiles','re-roof','reroof'],ask:"What's the roof area? And what's on there now — tiles, tin, concrete? 🔨"},
+  painting:{kw:['paint','painting','repaint','colour','interior','exterior'],ask:"Interior, exterior, or both? How many rooms/sqm? 🎨"},
+  fence:{kw:['fence','fencing','gate','boundary','colourbond'],ask:"How many linear metres? What type — colorbond, timber, aluminium slat? 🏗️"},
+  pool:{kw:['pool','swimming','spa','plunge'],ask:"Concrete, fibreglass, or plunge? Roughly what size? 🏊"},
+  solar:{kw:['solar','panels','battery','inverter','ev charger'],ask:"What system size — 6.6kW, 10kW, 13kW? Battery included? ☀️"},
+  general:{kw:[],ask:"Sounds interesting 👍 Can you give me a bit more detail? Roughly how big is the job?"}
+};
+function detectCat(t){const l=t.toLowerCase();for(const[c,v]of Object.entries(categories)){if(c==='general')continue;if(v.kw.some(k=>l.includes(k)))return c;}return'general';}
+function genQuote(cat,text){
+  const l=text.toLowerCase(),pr=l.includes('premium')||l.includes('luxury'),bu=l.includes('budget')||l.includes('cheap'),m=pr?1.4:bu?.7:1,id='Q-'+Math.floor(1900+Math.random()*99);
+  const T={bathroom:{t:"Bathroom Renovation",items:[{n:"Demo",c:2800},{n:"Waterproofing",c:1900},{n:"Tiling",c:4200},{n:"Plumbing",c:3800},{n:"Fixtures",c:4200},{n:"Vanity",c:1800},{n:"Electrical",c:1400},{n:"Paint",c:900}],time:"3-4 WKS",margin:"28%"},kitchen:{t:"Kitchen Renovation",items:[{n:"Demo",c:3200},{n:"Cabinetry",c:12000},{n:"Benchtop",c:4500},{n:"Splashback",c:2200},{n:"Plumbing",c:3000},{n:"Electrical",c:2800},{n:"Appliances",c:1200},{n:"Paint",c:1100}],time:"4-6 WKS",margin:"26%"},deck:{t:"Deck Build",items:[{n:"Footings",c:3500},{n:"Frame",c:5200},{n:"Boards",c:6800},{n:"Stairs & balustrade",c:3200},{n:"Trim",c:1400},{n:"Seal & oil",c:900}],time:"1-2 WKS",margin:"30%"},extension:{t:"Extension",items:[{n:"Footings & slab",c:18000},{n:"Framing",c:14000},{n:"Cladding",c:10000},{n:"Roofing",c:6500},{n:"Electrical",c:4200},{n:"Plumbing",c:3800},{n:"Linings",c:5500},{n:"Flooring",c:4800},{n:"Paint",c:3600}],time:"10-14 WKS",margin:"24%"},office:{t:"Office Fit-Out",items:[{n:"Partitions",c:22000},{n:"Electrical + data",c:16000},{n:"HVAC",c:12000},{n:"Flooring",c:9000},{n:"Joinery",c:8000},{n:"Paint",c:5000},{n:"Compliance",c:4500}],time:"6-10 WKS",margin:"26%"},roof:{t:"Roof Replacement",items:[{n:"Scaffolding",c:4200},{n:"Strip",c:5500},{n:"Battens",c:3800},{n:"Roofing",c:16000},{n:"Flashing",c:2800},{n:"Gutters",c:4500},{n:"Insulation",c:3600},{n:"Clean-up",c:1800}],time:"5-7 DAYS",margin:"30%"},painting:{t:"Painting",items:[{n:"Prep",c:2400},{n:"Primer",c:1800},{n:"2x coats",c:4200},{n:"Trim",c:1600},{n:"Clean-up",c:600}],time:"3-5 DAYS",margin:"32%"},fence:{t:"Fencing",items:[{n:"Remove old",c:1800},{n:"Posts",c:3200},{n:"Panels",c:5400},{n:"Gate",c:1200},{n:"Clean-up",c:600}],time:"2-3 DAYS",margin:"30%"},pool:{t:"Pool Install",items:[{n:"Excavation",c:8000},{n:"Shell",c:28000},{n:"Plumbing",c:6500},{n:"Electrical",c:3500},{n:"Coping",c:5000},{n:"Fencing",c:4200},{n:"Landscaping",c:3800}],time:"8-12 WKS",margin:"22%"},solar:{t:"Solar Install",items:[{n:"Panels",c:4200},{n:"Inverter",c:1800},{n:"Mounting",c:1200},{n:"Electrical",c:1500},{n:"Compliance",c:600}],time:"1-2 DAYS",margin:"28%"},general:{t:"Construction Project",items:[{n:"Assessment",c:3500},{n:"Materials",c:12000},{n:"Labour",c:15000},{n:"Mgmt",c:3200},{n:"Equipment",c:2800},{n:"Compliance",c:1800},{n:"Clean-up",c:1200}],time:"4-8 WKS",margin:"25%"}};
+  const tmpl=T[cat]||T.general;return{t:tmpl.t,id,items:tmpl.items.map(i=>({n:i.n,c:Math.round(i.c*m/50)*50})),time:tmpl.time,margin:tmpl.margin};
+}
+
+let chatState='idle',chatCat='general';
+
+function send(){
+  killAll();
+  const t=I.value.trim();if(!t)return;I.value='';msg(t,'out');
+  const l=t.toLowerCase();busy=true;
+  if(chatState==='idle'){
+    chatCat=detectCat(t);
+    if(t.length>80){showT();setTimeout(()=>{hideT();msg("Nice — plenty of detail 👍 Pricing now...",'in');showT();setTimeout(()=>{hideT();renderQuote(genQuote(chatCat,t));busy=false;chatState='idle';},1200);},700);}
+    else{chatState='asked';showT();setTimeout(()=>{hideT();msg(categories[chatCat].ask,'in');busy=false;},600);}
+  }else if(chatState==='asked'){
+    if(t.length>30||l.includes('mid')||l.includes('premium')||l.includes('budget')||l.includes('sqm')||l.match(/\d+/)){
+      chatState='idle';showT();const a=["Got it 👍","Sweet — pricing now 🔍","Easy, pulling rates"];
+      setTimeout(()=>{hideT();msg(a[Math.floor(Math.random()*a.length)],'in');showT();setTimeout(()=>{hideT();renderQuote(genQuote(chatCat,t));busy=false;},1200);},600);
+    }else{
+      const f={bathroom:"Freestanding or built-in bath? Frameless screen? 🤔",kitchen:"Stone or laminate benchtops?",deck:"How many sqm? Any stairs?",extension:"Single or double storey?",office:"How many offices vs open plan?",roof:"Gutters and insulation too?",general:"Rough size and what trades? 🤔"};
+      showT();setTimeout(()=>{hideT();msg(f[chatCat]||f.general,'in');busy=false;},600);
+    }
+  }else{
+    chatState='idle';chatCat=detectCat(t);
+    showT();setTimeout(()=>{hideT();msg("Pricing that up 👍",'in');showT();setTimeout(()=>{hideT();renderQuote(genQuote(chatCat,t));busy=false;},1200);},600);
+  }
+}
+
+function preset(k){
+  killAll();
+  resetChat();
+  userOwns=true;
+  const g=++gen;
+  setTimeout(()=>{if(gen===g)playScript(k);},300);
+}
+
+I.addEventListener('focus',killAll);
+
+function resetChat(){M.innerHTML='<div class="wa-date">Today</div><div class="wa-m wa-m-in">Hey 👋 Describe any job and I\'ll price it for you.<div class="wa-ts">now</div></div>';}
+
+const keys=['bathroom','voice','pricing','extension','suppliers','office','roof'];let li=0;
+function loop(){
+  if(userOwns)return;const g=gen;const k=keys[li%keys.length];li++;
+  playScript(k,()=>{if(gen!==g||userOwns)return;aT.push(setTimeout(()=>{if(gen!==g||userOwns)return;resetChat();aT.push(setTimeout(loop,600));},4000));});
+}
+aT.push(setTimeout(loop,1200));
+</script>
+</body>
+</html>
