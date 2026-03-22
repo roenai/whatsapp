@@ -88,24 +88,6 @@ body::before{
 .cap-arrow{align-self:center;font-size:18px;color:var(--dim);transition:all .2s;flex-shrink:0;}
 .capsule:hover .cap-arrow{color:var(--green);transform:translateX(3px);}
 
-/* Back bar */
-.back-bar{
-  max-width:1100px;margin:0 auto;padding:12px 48px;
-  display:flex;align-items:center;gap:8px;cursor:pointer;
-}
-.back-bar:hover .back-text{color:var(--white);}
-.back-arrow{color:var(--green);font-size:18px;font-weight:300;}
-.back-text{font-size:12px;color:var(--gray);transition:color .2s;font-weight:400;}
-
-/* Demo frame */
-.demo-wrap{max-width:1100px;margin:0 auto;padding:0 48px;}
-.demo-frame{
-  width:100%;border:1px solid var(--border);border-radius:14px;
-  overflow:hidden;background:var(--black);
-}
-.demo-frame iframe{
-  width:100%;height:calc(100vh - 100px);min-height:750px;border:none;display:block;background:var(--black);
-}
 
 .foot{padding:24px 48px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;margin-top:40px;}
 .foot-logo{font-family:var(--logo);font-size:15px;font-weight:600;color:var(--dim);text-decoration:none;display:flex;align-items:center;gap:5px;}
@@ -124,9 +106,6 @@ body::before{
   .cap-icon{font-size:20px;}
   .cap-title{font-size:13px;}
   .cap-desc{font-size:11px;}
-  .demo-wrap{padding:0 12px;}
-  .demo-frame{border-radius:10px;}
-  .back-bar{padding:10px 20px;}
   .foot{padding:16px 20px;}
   .agents-bar{padding:4px 20px 0;}
 }
@@ -154,18 +133,6 @@ body::before{
   <div class="capsules" id="capsules"></div>
 </div>
 
-<!-- DEMO VIEW (starts off-screen via height:0) -->
-<div id="demoView" style="height:0;overflow:hidden;opacity:0;transition:opacity .3s;">
-  <div class="back-bar" id="backBar">
-    <span class="back-arrow">&lsaquo;</span>
-    <span class="back-text">All demos</span>
-  </div>
-  <div class="demo-wrap">
-    <div class="demo-frame">
-      <iframe id="demoFrame" src="about:blank" title="Product demo" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe>
-    </div>
-  </div>
-</div>
 
 <footer class="foot">
   <a href="https://roenai.com" class="foot-logo"><span class="foot-d"></span>roen</a>
@@ -186,48 +153,12 @@ var demos = [
 ];
 
 var container = document.getElementById('capsules');
-demos.forEach(function(d, i) {
-  var el = document.createElement('div');
+demos.forEach(function(d) {
+  var el = document.createElement('a');
   el.className = 'capsule';
-  el.setAttribute('data-idx', i);
+  el.href = d.file;
   el.innerHTML = '<div class="cap-icon">' + d.icon + '</div><div class="cap-info"><div class="cap-title">' + d.title + '</div><div class="cap-desc">' + d.desc + '</div><span class="cap-tag">' + d.tag + '</span></div><span class="cap-arrow">›</span>';
-  el.addEventListener('click', function() { loadDemo(i); });
   container.appendChild(el);
-});
-
-var homeView = document.getElementById('homeView');
-var demoView = document.getElementById('demoView');
-var demoFrame = document.getElementById('demoFrame');
-var navRight = document.getElementById('navRight');
-var backBar = document.getElementById('backBar');
-var navLogo = document.getElementById('navLogo');
-
-function loadDemo(idx) {
-  var d = demos[idx];
-  homeView.style.display = 'none';
-  demoFrame.src = d.file;
-  demoView.style.height = 'auto';
-  demoView.style.overflow = 'visible';
-  demoView.style.opacity = '1';
-  navRight.textContent = d.title;
-  window.scrollTo(0, 0);
-}
-
-function showHome() {
-  demoView.style.height = '0';
-  demoView.style.overflow = 'hidden';
-  demoView.style.opacity = '0';
-  demoFrame.src = 'about:blank';
-  homeView.style.display = 'block';
-  navRight.textContent = 'Product Demos';
-  window.scrollTo(0, 0);
-}
-
-backBar.addEventListener('click', showHome);
-navLogo.addEventListener('click', showHome);
-
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') showHome();
 });
 </script>
 </body>
