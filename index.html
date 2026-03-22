@@ -68,10 +68,9 @@ body::before{
 .capsules{max-width:900px;margin:0 auto;padding:32px 48px 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;}
 
 .capsule{
-  padding:20px 24px;border:1px solid var(--border);border-radius:12px;
+  padding:24px 28px;border:1px solid var(--border);border-radius:12px;
   background:var(--surface);cursor:pointer;transition:all .25s;
   display:flex;align-items:flex-start;gap:14px;text-decoration:none;color:inherit;
-  height:120px;overflow:hidden;
 }
 .capsule:hover{border-color:rgba(0,200,83,.35);background:rgba(0,200,83,.03);transform:translateY(-2px);}
 .capsule.active{border-color:var(--green);background:rgba(0,200,83,.06);}
@@ -90,10 +89,10 @@ body::before{
 .capsule:hover .cap-arrow{color:var(--green);transform:translateX(3px);}
 
 .capsule-soon{
-  padding:20px 24px;border:1px dashed var(--dim);border-radius:12px;
+  padding:24px 28px;border:1px dashed var(--dim);border-radius:12px;
   background:transparent;cursor:default;
   display:flex;align-items:center;justify-content:center;gap:10px;
-  opacity:0.45;pointer-events:none;height:120px;
+  opacity:0.45;pointer-events:none;
 }
 .capsule-soon .cap-icon{font-size:20px;}
 .capsule-soon .cap-title{font-family:var(--heading);font-size:13px;font-weight:400;color:var(--gray);}
@@ -175,6 +174,14 @@ var soon = document.createElement('div');
 soon.className = 'capsule-soon';
 soon.innerHTML = '<div class="cap-icon">✦</div><div class="cap-title">More Coming Soon</div>';
 container.appendChild(soon);
+
+// Equalize all card heights to the tallest card
+requestAnimationFrame(function() {
+  var cards = container.querySelectorAll('.capsule, .capsule-soon');
+  var max = 0;
+  cards.forEach(function(c) { max = Math.max(max, c.offsetHeight); });
+  cards.forEach(function(c) { c.style.minHeight = max + 'px'; });
+});
 </script>
 </body>
 </html>
