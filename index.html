@@ -65,35 +65,44 @@ body::before{
   padding:2px 7px;border-radius:4px;
 }
 
-.capsules{max-width:900px;margin:0 auto;padding:32px 48px 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;}
+.capsules{
+  max-width:900px;margin:0 auto;padding:32px 48px 20px;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+  gap:1px;background:rgba(255,255,255,0.06);
+  outline:1px solid rgba(255,255,255,0.06);
+}
 
 .capsule{
-  padding:24px 28px;border:1px solid var(--border);border-radius:12px;
-  background:var(--surface);cursor:pointer;transition:all .25s;
+  padding:28px 24px;border:none;border-radius:0;
+  background:rgba(255,255,255,0.03);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  cursor:pointer;transition:background .2s,box-shadow .2s;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  text-align:center;gap:14px;text-decoration:none;color:inherit;
+  text-align:center;gap:12px;text-decoration:none;color:inherit;
+  box-shadow:inset 0 0 0 0 transparent;
 }
-.capsule:hover{border-color:rgba(0,200,83,.35);background:rgba(0,200,83,.03);transform:translateY(-2px);}
-.capsule.active{border-color:var(--green);background:rgba(0,200,83,.06);}
+.capsule:hover{
+  background:rgba(255,255,255,0.06);
+  box-shadow:inset 0 0 30px rgba(255,255,255,0.02);
+}
 
 .cap-icon{font-size:24px;}
 .cap-info{}
 .cap-title{font-family:var(--heading);font-size:14px;font-weight:600;color:var(--white);margin-bottom:3px;}
 .cap-desc{font-size:11.5px;font-weight:300;color:var(--gray);line-height:1.5;}
 .cap-tag{
-  display:inline-block;margin-top:6px;
+  display:inline-block;margin-top:4px;
   font-family:var(--mono);font-size:7.5px;font-weight:400;
-  color:var(--green);letter-spacing:1px;text-transform:uppercase;
-  padding:2px 6px;border-radius:3px;background:transparent;
+  letter-spacing:1px;text-transform:uppercase;
 }
-.cap-arrow{align-self:center;font-size:18px;color:var(--dim);transition:all .2s;flex-shrink:0;}
-.capsule:hover .cap-arrow{color:var(--green);transform:translateX(3px);}
 
 .capsule-soon{
-  padding:24px 28px;border:1px dashed var(--dim);border-radius:12px;
-  background:transparent;cursor:default;
+  padding:28px 24px;border:none;border-radius:0;
+  background:rgba(255,255,255,0.015);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  cursor:default;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  text-align:center;gap:10px;opacity:0.45;pointer-events:none;
+  text-align:center;gap:10px;opacity:0.35;pointer-events:none;
 }
 .capsule-soon .cap-icon{font-size:20px;}
 .capsule-soon .cap-title{font-family:var(--heading);font-size:13px;font-weight:400;color:var(--gray);}
